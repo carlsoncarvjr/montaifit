@@ -418,6 +418,17 @@ header.top{flex-wrap:nowrap}
 .tipsug{display:flex;flex-wrap:wrap;gap:6px}
 .sggoal{display:block;margin-top:2px}
 .goallink{margin:2px 0 12px}
+/* Montar com IA */
+.iabtn{display:flex;align-items:center;justify-content:center;gap:8px}
+.iabtn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+.iaform{display:flex;flex-direction:column;gap:12px}
+.iaform>p{margin:0;color:var(--muted);font-size:.95rem}
+.iatext{width:100%;min-height:132px;resize:vertical;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;color:var(--fg);font:inherit;font-size:1rem;line-height:1.45;box-sizing:border-box}
+.iatext:focus{outline:2px solid var(--surface-2);outline-offset:1px}
+.iaform .lmsg:empty{display:none}
+.ianota{background:var(--surface);border-radius:16px;padding:14px 16px}
+.ianota b{display:block;font-size:.85rem;margin-bottom:4px}
+.ianota p{margin:0;color:var(--muted);font-size:.92rem;line-height:1.45}
 .goalnote{margin:0 0 12px;max-width:60ch}
 .catitem .tick{position:absolute;top:12px;right:12px;width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:none;place-items:center;font-weight:800}
 .catitem.on{border-color:var(--accent)}
@@ -1672,7 +1683,7 @@ function render(){
   $("#cfgSum").textContent = [opt("goal"), `${state.cfg.days} dias`, opt("time"), state.cfg.enf!=="none"?`ênfase: ${opt("enf")}`:""].filter(Boolean).join(" · ");
   document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected", t.dataset.view===state.view));
   const inSession = !!state.session && state.view==="treinar" && !ui.min;
-  const sub = state.view==="plano" && ui.planSub ? (ui.planSub.kind==="sug" ? "Treino sugerido" : "Montar treino") : null;
+  const sub = state.view==="plano" && ui.planSub ? (ui.planSub.kind==="sug" ? "Treino sugerido" : ui.planSub.kind==="ia" ? "Montar com IA" : "Montar treino") : null;
   $("#ptitle").textContent = sub || {plano:"Plano", objetivo:"Objetivo", historico:"Histórico"}[state.view] || "Treino";
   paintHeader(state.view==="treinar" && !sub);
   $("#smoke").hidden = false; $("#smoke").classList.toggle("soft", state.view!=="treinar");
@@ -1702,6 +1713,7 @@ const norm = t=>String(t).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowe
 function renderPlan(){
   if(!ui.planSub) return renderPlanHome();
   if(ui.planSub.kind==="sug") return renderPlanSug();
+  if(ui.planSub.kind==="ia") return renderIA();
   return renderMine() + (ui.cat ? renderCatalog() : "");
 }
 function renderPlanHome(){
@@ -1715,15 +1727,75 @@ function renderPlanHome(){
     ${state.mine.length ? `<div class="mylist">${state.mine.map(m=>`<button class="myrow" data-act="openmine" data-id="${m.id}">${DUMB}<span class="mt"><b>${esc(m.name)}</b><small>${m.items.length} exercícios${m.id===pickId?" · treino de hoje":""}</small></span><span class="chev" aria-hidden="true">${ICO.right}</span></button>`).join("")}</div>`
       : `<p class="note">Nenhum treino montado ainda.</p>`}
     <button class="primary pbtn" data-act="newmine">+ Montar treino</button>
+    ${FB_ON?`<button class="sec pbtn iabtn" data-act="openia">${IA_ICO} Montar com IA</button>`:""}
   </div>`;
 }
 const RESTS = ["45s","60s","90s","2 min","3 min"];
+// ---------- Montar com IA (Claude Haiku 5.5, pela função montarTreino no Firebase) ----------
+const IA_ICO = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>`;
+const IA_CHIPS = ["30 minutos", "Só halteres", "Em casa, sem equipamento", "Foco em glúteos", "Cardio para queimar calorias", "Estou com dor no joelho"];
+function renderIA(){
+  return `<div class="iaform">
+    <p>Conte o que você quer treinar hoje: tempo, equipamento, foco e se sente alguma dor. A IA monta o treino com os exercícios do app e você revisa antes de salvar.</p>
+    <textarea id="iatext" class="iatext" data-act="iatext" maxlength="600" aria-label="O que você quer treinar hoje" placeholder="Ex.: tenho 40 minutos, só halteres, quero focar em costas. Estou com o ombro direito um pouco dolorido.">${esc(ui.iaText||"")}</textarea>
+    <div class="chips">${IA_CHIPS.map(c=>`<button class="chip" data-act="iachip" data-v="${esc(c)}">${esc(c)}</button>`).join("")}</div>
+    <button class="primary pbtn" data-act="iago" ${ui.iaBusy?"disabled":""}>${ui.iaBusy?"Montando seu treino…":"Montar treino"}</button>
+    <p class="note lmsg" role="alert">${esc(ui.iaMsg||"")}</p>
+    <p class="note">Sugestão automática: não substitui a orientação de um profissional de educação física ou de saúde. Até 10 pedidos por dia.</p>
+  </div>`;
+}
+const IA_GOAL = {hip:"Ganhar massa", for:"Ganhar força", con:"Condicionamento e resistência"};
+const IA_LEVEL = {ini:"Iniciante", int:"Intermediário", ava:"Avançado"};
+const IA_EQUIP = {full:"Academia completa", dumb:"Só halteres", body:"Só peso do corpo"};
+function iaRecentes(){
+  const out = [], seen = new Set();
+  for(let i=state.history.length-1;i>=0 && out.length<25;i--){
+    for(const en of (state.history[i].entries||[])){
+      if(seen.has(en.id) || !BY[en.id] || !en.sets || !en.sets.length) continue;
+      seen.add(en.id);
+      const best = en.sets.reduce((a,x)=>toNum(x.kg)>toNum(a.kg)?x:a, en.sets[0]);
+      out.push({id:en.id, kg:toNum(best.kg), reps:parseInt(best.reps)||0, data:String(state.history[i].date||"").slice(0,10)});
+    }
+  }
+  return out.slice(0,25);
+}
+const IA_ERR = {"functions/resource-exhausted":1, "functions/failed-precondition":1, "functions/invalid-argument":1, "functions/unavailable":1, "functions/unauthenticated":1};
+async function iaGo(){
+  const pedido = (ui.iaText||"").trim();
+  const fail = t=>{ ui.iaBusy = false; ui.iaMsg = t; render(); };
+  if(pedido.length<3){ fail("Escreva o que você quer treinar hoje."); return; }
+  if(!navigator.onLine){ fail("A IA precisa de internet. Sem sinal, use o plano sugerido ou monte o treino à mão."); return; }
+  if(!fb.user){ fail("Entre na sua conta para usar a IA."); return; }
+  ui.iaBusy = true; ui.iaMsg = ""; render();
+  try{
+    if(!fb.fn){ await loadScript(FB_SDK+"functions-compat.js"); fb.fn = firebase.app().functions("southamerica-east1"); }
+    const c = state.cfg;
+    const res = await fb.fn.httpsCallable("montarTreino", {timeout:70000})({
+      pedido,
+      catalogo: EX.map(e=>({id:e.id, nome:e.name, grupo:e.g, eq:e.eq})),
+      perfil: {objetivo:IA_GOAL[c.goal]||"", nivel:IA_LEVEL[c.level]||"", equipamento:IA_EQUIP[c.equip]||"", tempo:c.time?c.time+" min":""},
+      evitar: c.avoid||[],
+      recentes: iaRecentes()
+    });
+    const t = res && res.data || {};
+    const items = (t.itens||[]).filter(it=>BY[it.id]).map(it=>({id:it.id, sets:+it.sets||3, reps:String(it.reps||"8–12"), rest:RESTS.includes(it.rest)?it.rest:"90s"}));
+    if(!items.length){ fail(t.nota || "Não consegui montar um treino com esse pedido. Tente descrever de outro jeito."); return; }
+    ui.iaBusy = false; ui.iaText = "";
+    ui.draft = {id:"m"+Date.now().toString(36), name:String(t.titulo||"Treino da IA").slice(0,40), items, nota:String(t.nota||""), ia:true};
+    ui.planSub = {kind:"mine"}; ui.editIdx = null; ui.confirmDelMine = false;
+    render(); window.scrollTo({top:0});
+  }catch(e){
+    const code = e && e.code ? (String(e.code).startsWith("functions/") ? e.code : "functions/"+e.code) : "";
+    fail(IA_ERR[code] && e.message ? e.message : "Não deu para montar agora. Confira a internet e tente de novo.");
+  }
+}
 function renderMine(){
   const m = ui.draft; if(!m) return "";
   const saved = state.mine.some(x=>x.id===m.id);
   return `<div class="mine">
     <label class="namefield"><input id="mname" value="${esc(m.name)}" placeholder="Nome do treino" data-act="mname" aria-label="Nome do treino" autocomplete="off"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4"/></svg></label>
     ${m.items.length ? mineSummary(m.items) : `<div class="mempty"><p>Escolha por onde começar. Você pode juntar quantos músculos quiser.</p><div class="chips">${Object.entries(GROUPS).map(([g,l])=>`<button class="chip" data-act="opencatg" data-g="${g}">${l}</button>`).join("")}</div></div>`}
+    ${m.nota?`<div class="ianota"><b>${m.ia?"Por que este treino":"Nota do treino"}</b><p>${esc(m.nota)}</p></div>`:""}
     <div class="mylist">${m.items.map((it,i)=>{ const open = ui.editIdx===i; return `<div class="mrow${open?" open":""}">
       <button class="mhead" data-act="medit" data-i="${i}" aria-expanded="${open}"><canvas class="anim thumb" data-ex="${it.id}" data-off="${i*500}" aria-hidden="true"></canvas>
         <span class="mt"><b>${esc(BY[it.id]?.name||it.id)}</b><small>${BY[it.id]?GROUPS[BY[it.id].g]+" · ":""}${esc(it.sets)} × ${esc(it.reps)} · ${esc(it.rest)}</small></span><span class="dots" aria-hidden="true">⋯</span></button>
@@ -1914,7 +1986,7 @@ function renderHome(){
   const pick = hp && hp.id ? state.mine.find(m=>m.id===hp.id && m.items.length) : null;
   let title, items, act, nota = "", sub = "";
   if(s){ const d = sessDay(s); title = s.custom ? d.name : d.type; items = s.entries; act = `data-act="cont"`; sub = "Treino em andamento"; }
-  else if(pick){ title = pick.name; items = pick.items; act = `data-act="startmine" data-id="${pick.id}"`; sub = "Meu treino"; }
+  else if(pick){ title = pick.name; items = pick.items; act = `data-act="startmine" data-id="${pick.id}"`; sub = pick.ia ? "Treino montado pela IA" : "Meu treino"; nota = pick.nota||""; }
   else if(sg){ title = sg.titulo; items = sg.itens; act = `data-act="startsug"`; nota = sg.nota||""; sub = "Treino do seu personal"; }
   else if(nd){ title = nd.type; items = nd.items; act = `data-act="startday" data-day="${ni}"`; sub = nd.name; }
   else return `<div class="empty">Gere um plano na aba Plano.</div>`;
@@ -1941,7 +2013,7 @@ function renderHome(){
         </div>
         ${ui.pledit?`<form class="plform" id="plform"><input id="plurl" type="url" inputmode="url" placeholder="Cole aqui o link da sua playlist" value="${esc(pl||"")}" aria-label="Link da playlist"><button class="sec">Salvar</button></form>`:""}
         ${ui.list?`<ol class="ficha">${items.map(it=>`<li><span>${esc(BY[it.id]?.name||it.id)}</span><span class="num">${it.sets? (Array.isArray(it.sets)?it.sets.length:esc(it.sets))+" × "+esc(it.reps||range(entryReps(it)).hi):""}</span></li>`).join("")}</ol>`:""}
-        ${nota?`<button class="linkbtn" data-act="tgnota">Nota do personal ${ui.nota?ICO.up:ICO.down}</button>${ui.nota?`<p class="nota">${esc(nota)}</p>`:""}`:""}
+        ${nota?`<button class="linkbtn" data-act="tgnota">${sg?"Nota do personal":"Por que este treino"} ${ui.nota?ICO.up:ICO.down}</button>${ui.nota?`<p class="nota">${esc(nota)}</p>`:""}`:""}
         ${state.history.length?weekRow():""}
         <button class="primary pbtn" ${act}>${s?"Continuar treino":"Começar treino"}</button>
       </div>
@@ -2648,6 +2720,9 @@ view.addEventListener("click", e=>{
   if(act==="pledit"){ ui.pledit = !ui.pledit; render(); if(ui.pledit) $("#plurl")?.focus(); return; }
   // Plano
   if(act==="opensug"){ ui.planSub = {kind:"sug"}; render(); window.scrollTo({top:0}); return; }
+  if(act==="openia"){ ui.planSub = {kind:"ia"}; ui.iaMsg = ""; render(); window.scrollTo({top:0}); $("#iatext")?.focus(); return; }
+  if(act==="iachip"){ const t = (ui.iaText||"").trim(), v = b.dataset.v; ui.iaText = t ? (t.replace(/[.,;]?$/,"")+", "+v.charAt(0).toLowerCase()+v.slice(1)) : v; render(); const el = $("#iatext"); if(el){ el.focus(); el.setSelectionRange(el.value.length, el.value.length); } return; }
+  if(act==="iago"){ if(!ui.iaBusy) iaGo(); return; }
   if(act==="newmine"){ ui.draft = {id:"m"+Date.now().toString(36), name:`Meu treino ${String.fromCharCode(65+state.mine.length)}`, items:[]}; ui.planSub = {kind:"mine"}; ui.editIdx = null; ui.confirmDelMine = false; ui.cat = {q:"", g:"all", sel:[]}; render(); return; }
   if(act==="openmine"){ const m = state.mine.find(x=>x.id===b.dataset.id); if(!m) return; ui.draft = JSON.parse(JSON.stringify(m)); ui.planSub = {kind:"mine"}; ui.editIdx = null; ui.confirmDelMine = false; render(); window.scrollTo({top:0}); return; }
   if(act==="opencat"){ ui.cat = {q:"", g:"all", sel:[]}; render(); return; }
@@ -2771,6 +2846,7 @@ view.addEventListener("submit", e=>{
 view.addEventListener("input", e=>{
   const el = e.target, act = el.dataset.act;
   if(act==="mname"){ if(ui.draft) ui.draft.name = el.value; return; }
+  if(act==="iatext"){ ui.iaText = el.value; return; }
   if(act==="mreps"){ if(ui.draft) ui.draft.items[+el.dataset.i].reps = el.value; return; }
   if(act==="catq"){ ui.cat.q = el.value; $("#catgrid").innerHTML = catGrid(); EXA.mount($("#catgrid")); return; }
   if(act==="pval"){ const st = state.session.entries[+el.dataset.e].sets[+el.dataset.s]; st[el.dataset.f] = el.value.replace(/[^0-9.,]/g,""); st.t = true; save(); return; }
