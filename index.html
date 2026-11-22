@@ -3245,10 +3245,15 @@ async function drawSharePhoto(h, recs, img, fmt, tpl, titulo){
   x.drawImage(img, (W-iw)/2, (H-ih)/2, iw, ih);
   // vinheta: escurece bordas e cantos e deixa o centro da foto em destaque
   const vr = Math.hypot(W, H)/2, vg = x.createRadialGradient(W/2, H*.42, vr*.42, W/2, H*.42, vr*1.02);
-  vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(.6, "rgba(0,0,0,.18)"); vg.addColorStop(1, "rgba(0,0,0,.62)");
+  vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(.6, "rgba(0,0,0,.12)"); vg.addColorStop(1, "rgba(0,0,0,.45)");
   x.fillStyle = vg; x.fillRect(0, 0, W, H);
+  // brilho laranja da marca nas bordas (mistura suave, sem apagar a foto)
+  const og = x.createRadialGradient(W/2, H*.42, vr*.5, W/2, H*.42, vr*1.02);
+  og.addColorStop(0, "rgba(255,117,31,0)"); og.addColorStop(.5, "rgba(255,117,31,.3)"); og.addColorStop(1, "rgba(255,96,20,.95)");
+  x.save(); x.globalCompositeOperation = "soft-light"; x.fillStyle = og; x.fillRect(0, 0, W, H);
+  x.globalCompositeOperation = "source-over"; x.globalAlpha = .5; x.fillRect(0, 0, W, H); x.restore();
   let g = x.createLinearGradient(0,0,0,300); g.addColorStop(0,"rgba(0,0,0,.55)"); g.addColorStop(1,"rgba(0,0,0,0)"); x.fillStyle = g; x.fillRect(0,0,W,300);
-  if(tpl!=="exercicios"){ const gy = H*(feed ? .38 : .48); g = x.createLinearGradient(0,gy,0,H); g.addColorStop(0,"rgba(0,0,0,0)"); g.addColorStop(.45,"rgba(0,0,0,.55)"); g.addColorStop(1,"rgba(0,0,0,.86)"); x.fillStyle = g; x.fillRect(0,gy,W,H-gy); }
+  if(tpl!=="exercicios"){ const gy = H*(feed ? .38 : .48); g = x.createLinearGradient(0,gy,0,H); g.addColorStop(0,"rgba(20,8,2,0)"); g.addColorStop(.45,"rgba(24,9,2,.55)"); g.addColorStop(1,"rgba(26,9,2,.86)"); x.fillStyle = g; x.fillRect(0,gy,W,H-gy); }
   const logo = await loadLogo();
   if(logo){ const lw = 300; x.drawImage(logo, P-12, feed ? 64 : 120, lw, lw*logo.height/logo.width); }
   const d = new Date(h.date), sets = h.entries.flatMap(e=>e.sets), vol = sets.reduce((a,st)=>a+toNum(st.kg)*toNum(st.reps),0);
