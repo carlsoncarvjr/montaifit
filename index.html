@@ -541,6 +541,9 @@ header.top{flex-wrap:nowrap}
 .donebtns .linkbtn{align-self:center}
 .sharemodal .bkbtns{width:100%;max-width:420px}
 .sharemodal .note{margin:0;text-align:center}
+.shmodos{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;width:100%;max-width:420px}
+.shmodos .chip{background:var(--surface-2);border:none;border-radius:999px;padding:8px 14px;color:var(--fg)}
+.shmodos .chip[aria-pressed="true"]{background:var(--fg);color:#141414}
 .hfoot .linkbtn{align-self:auto}
 .hfbtns{display:flex;gap:18px;align-items:center}
 /* ---- Marca no topo e escolha de perfil ---- */
@@ -840,7 +843,7 @@ window.EXA = (() => {
     chestm:{A:{h:[70,90],t:-92,a:[83,61,-1],ae:[63,63],l:[100,122,-1]},B:{h:[70,90],t:-92,a:[107,58,1],ae:[88,57],l:[100,122,-1]},p:[["lever",58,100],["grip"]]},
     cruci:{A:{...lying([66,54,1]),ae:[63,73]},B:{...lying([66,110,1]),ae:[64,100]},p:[...BENCH,["db"]]},
     cross:{v:"f",arc:[93.3,31],A:{h:[80,67],a:[124,22,1],l:[90,122,-1]},B:{h:[80,67],a:[76,70,1],l:[90,122,-1]},p:[["ln",152,4,152,122,3],["ln",8,4,8,122,3],["cabF",137,18],["pegF"]]},
-    peck:{v:"f",A:{h:[80,88],a:[126,50,1],ae:[110,55],l:[92,122,-1]},B:{h:[80,88],a:[85,56,1],ae:[99,60],l:[92,122,-1]},p:[["r",62,88,36,5]]},
+    peck:{v:"f",A:{h:[80,88],a:[126,50,1],ae:[110,55],l:[92,122,-1]},B:{h:[80,88],a:[85,56,1],ae:[89.5,54],l:[92,122,-1]},p:[["r",62,88,36,5]]},
     flex:{A:{h:[77.5,98.4],t:-25.4,a:[112,122,1],l:[27.8,122,-1]},B:{h:[82.2,113.6],t:-8.8,a:[112,122,1],l:[27.8,122,-1]},p:[]},
     flexdiam:{A:{h:[77.5,98.4],t:-25.4,a:[110,122,1],l:[27.8,122,-1]},B:{h:[82.2,113.6],t:-8.8,a:[110,122,1],l:[27.8,122,-1]},p:[]},
     flexinc:{A:{h:[82,89.7],t:-10.8,a:[117,122,1],l:[28,100,-1]},B:{h:[82.8,104.8],t:5,a:[117,122,1],l:[28,100,-1]},p:[["r",12,100,28,22]]},
@@ -916,7 +919,7 @@ window.EXA = (() => {
     roscainv:{A:st([76,70,1]),B:st([84,32,1]),p:[["bb"]]},
     roscascotth:{A:{h:[60,81],t:-62,a:[107,74,1],l:[88,122,-1]},B:{h:[60,81],t:-62,a:[89,44,1],l:[88,122,-1]},p:[["db"]]},
     roscacorda:{A:{...ST,a:[76,70,1]},B:{...ST,a:[84,32,1]},p:[["cab",120,110],["corda"]]},
-    roscadrag:{A:{...ST,a:[78,70,1],ae:[75,51]},B:{...ST,a:[78,42,1],ae:[60,55]},p:[["bb"]]},
+    roscadrag:{A:{...ST,a:[78,70,1]},B:{...ST,a:[78,42,1]},p:[["bb"]]},
     supfechado:{A:lying([61,57,1]),B:lying([64,86,1]),p:[...BENCH,["bb"]]},
     tricepsov:{arc:[88.5,14],A:{h:[80,67],t:-80,a:[73,30,1],ae:[87,14],l:[82,122,-1]},B:{h:[80,67],t:-80,a:[104,6,1],ae:[90,14],l:[82,122,-1]},p:[["cab",16,13],["corda"]]},
     testah:{A:lying([59,57,1]),B:lying([38,80,1]),p:[...BENCH,["dbN"]]},
@@ -3147,17 +3150,103 @@ async function drawShare(h, recs){
 }
 async function openShare(i){
   const h = state.history[i]; if(!h) return;
-  const cv = await drawShare(h, histRecords()[i]||[]);
-  const blob = await new Promise(res=>cv.toBlob(res, "image/png"));
-  if(!blob) return;
-  if(ui.share) URL.revokeObjectURL(ui.share.url);
-  const file = new File([blob], `montai-fit-${dayKey(h.date)}.png`, {type:"image/png"});
-  ui.share = {url:URL.createObjectURL(blob), blob, file, msg:"", can:!!(navigator.canShare && navigator.canShare({files:[file]}))};
+  shareFechar();
+  ui.share = {i, modo:"cartao", fmt:"story", msg:""};
+  await gerarShare();
+}
+// Gera a imagem do modo atual: cartão escuro ou a foto da pessoa com os números por cima.
+async function gerarShare(){
+  const s = ui.share; if(!s) return;
+  const h = state.history[s.i]; if(!h) return;
+  const recs = histRecords()[s.i]||[];
+  const foto = s.modo==="foto" && s.foto;
+  const cv = foto ? await drawSharePhoto(h, recs, s.foto, s.fmt) : await drawShare(h, recs);
+  const tipo = foto ? "image/jpeg" : "image/png";
+  const blob = await new Promise(res=>cv.toBlob(res, tipo, .9));
+  if(!blob || ui.share!==s) return;
+  if(s.url) URL.revokeObjectURL(s.url);
+  const file = new File([blob], `montai-fit-${dayKey(h.date)}${foto?"-foto.jpg":".png"}`, {type:tipo});
+  Object.assign(s, {url:URL.createObjectURL(blob), blob, file, can:!!(navigator.canShare && navigator.canShare({files:[file]}))});
   render();
+}
+function shareFechar(){ const s = ui.share; if(!s) return; if(s.url) URL.revokeObjectURL(s.url); if(s.fotoUrl) URL.revokeObjectURL(s.fotoUrl); ui.share = null; }
+let shFotoIn = null;
+function shareEscolherFoto(){
+  if(!shFotoIn){
+    shFotoIn = document.createElement("input"); shFotoIn.type = "file"; shFotoIn.accept = "image/*"; shFotoIn.hidden = true;
+    shFotoIn.addEventListener("change", async ()=>{
+      const f = shFotoIn.files && shFotoIn.files[0]; shFotoIn.value = ""; const s = ui.share; if(!f || !s) return;
+      const url = URL.createObjectURL(f);
+      try{
+        const img = await new Promise((res, rej)=>{ const im = new Image(); im.onload = ()=>res(im); im.onerror = rej; im.src = url; });
+        if(s.fotoUrl) URL.revokeObjectURL(s.fotoUrl);
+        Object.assign(s, {foto:img, fotoUrl:url, modo:"foto", msg:""}); await gerarShare();
+      }catch(e){ URL.revokeObjectURL(url); s.msg = "Não consegui abrir essa foto. Tente outra."; render(); }
+    });
+    document.body.appendChild(shFotoIn);
+  }
+  shFotoIn.click();
+}
+// Foto do treino com os números por cima (formato Stories 9:16 ou Feed 4:5).
+async function drawSharePhoto(h, recs, img, fmt){
+  const W = 1080, H = fmt==="feed" ? 1350 : 1920, c = document.createElement("canvas"); c.width = W; c.height = H;
+  const x = c.getContext("2d"), FG = "#FFFFFF", MU = "rgba(255,255,255,.78)", AC = "#FF751F", P = 80;
+  try{ await Promise.all([document.fonts.load("800 100px Inter"), document.fonts.load("600 40px Inter")]); }catch(e){}
+  const font = (w,sz)=>{ x.font = `${w} ${sz}px Inter, system-ui, -apple-system, sans-serif`; };
+  // foto cobrindo tudo, centralizada
+  const k = Math.max(W/img.naturalWidth, H/img.naturalHeight), iw = img.naturalWidth*k, ih = img.naturalHeight*k;
+  x.fillStyle = "#141414"; x.fillRect(0,0,W,H);
+  x.drawImage(img, (W-iw)/2, (H-ih)/2, iw, ih);
+  // sombras para o texto ficar legível em qualquer foto
+  let g = x.createLinearGradient(0,0,0,300); g.addColorStop(0,"rgba(0,0,0,.55)"); g.addColorStop(1,"rgba(0,0,0,0)"); x.fillStyle = g; x.fillRect(0,0,W,300);
+  const gy = H*(fmt==="feed" ? .38 : .48); g = x.createLinearGradient(0,gy,0,H); g.addColorStop(0,"rgba(0,0,0,0)"); g.addColorStop(.45,"rgba(0,0,0,.55)"); g.addColorStop(1,"rgba(0,0,0,.86)");
+  x.fillStyle = g; x.fillRect(0,gy,W,H-gy);
+  const logo = await loadLogo();
+  if(logo){ const lw = 300; x.drawImage(logo, P-12, fmt==="feed" ? 64 : 120, lw, lw*logo.height/logo.width); }
+  // números
+  const d = new Date(h.date), sets = h.entries.flatMap(e=>e.sets), vol = sets.reduce((a,st)=>a+toNum(st.kg)*toNum(st.reps),0);
+  const title = h.dayType && !["Personal","Meu treino"].includes(h.dayType) ? h.dayType : h.dayName;
+  const stats = [...(vol ? [["Volume", Math.round(vol).toLocaleString("pt-BR"), "kg"]] : []), ...(h.dur ? [["Tempo", String(h.dur), "min"]] : []),
+    ["Séries", String(sets.length), ""], ["Exercícios", String(h.entries.filter(e=>e.sets.length).length), ""]].slice(0,4);
+  x.textBaseline = "alphabetic"; x.textAlign = "left";
+  let y = H - (fmt==="feed" ? 80 : 150);
+  // recorde (linha de destaque)
+  if(recs.length){
+    const r = recs[0], val = `${toNum(r.kg)?`${fmtKg(toNum(r.kg))} kg × `:""}${r.reps}${toNum(r.kg)?"":" reps"}`;
+    font(800, 40); x.fillStyle = AC; const lb = recs.length>1 ? `${recs.length} recordes` : "Novo recorde";
+    x.fillText(lb, P, y); const lw = x.measureText(lb+"  ").width;
+    font(600, 40); x.fillStyle = FG; let nm = `${BY[r.id]?.name||r.id} · ${val}`; while(x.measureText(nm).width>W-2*P-lw && nm.length>6) nm = nm.slice(0,-2).trimEnd()+"…";
+    x.fillText(nm, P+lw, y); y -= 96;
+  }
+  // linha de números
+  // cada coluna ocupa a largura do próprio número; se não couber, a fonte diminui
+  let big = 92; const GAP = 64;
+  const larg = sz=>stats.map(([lab, n, un])=>{ font(800, sz); let w = x.measureText(n).width; if(un){ font(700, sz*.45); w += 10 + x.measureText(un).width; } font(600, 34); return Math.max(w, x.measureText(lab).width); });
+  let ws = larg(big); while(ws.reduce((a,v)=>a+v,0) + GAP*(stats.length-1) > W-2*P && big>56){ big -= 4; ws = larg(big); }
+  let px = P;
+  stats.forEach(([lab, n, un], i)=>{
+    x.fillStyle = MU; font(600, 34); x.fillText(lab, px, y-big-8);
+    x.fillStyle = FG; font(800, big); x.fillText(n, px, y);
+    if(un){ const nw = x.measureText(n).width; font(700, big*.45); x.fillText(un, px+nw+10, y); }
+    px += ws[i] + GAP;
+  });
+  y -= big + 8 + 34 + 56;
+  // título e data
+  font(800, 96); x.fillStyle = FG;
+  let t = String(title); while(x.measureText(t).width>W-2*P && t.length>6) t = t.slice(0,-2).trimEnd()+"…";
+  x.fillText(t, P, y); y -= 96 + 8;
+  x.fillStyle = MU; font(600, 38);
+  x.fillText(`Treino concluído · ${d.toLocaleDateString("pt-BR",{day:"numeric",month:"long"})}`, P, y);
+  return c;
 }
 function renderShare(){
   const s = ui.share; if(!s) return "";
   return `<div class="sharemodal" role="dialog" aria-modal="true" aria-label="Resumo do treino">
+    <div class="shmodos" role="group" aria-label="Tipo de imagem">
+      <button class="chip" data-act="shmodo" data-v="cartao" aria-pressed="${s.modo!=="foto"}">Cartão</button>
+      <button class="chip" data-act="shmodo" data-v="foto" aria-pressed="${s.modo==="foto"}">${s.foto?"Com sua foto":"Usar uma foto"}</button>
+      ${s.modo==="foto" && s.foto ? `<button class="chip" data-act="shfmt" data-v="story" aria-pressed="${s.fmt!=="feed"}">Stories</button><button class="chip" data-act="shfmt" data-v="feed" aria-pressed="${s.fmt==="feed"}">Feed</button><button class="chip" data-act="shfoto">Trocar foto</button>` : ""}
+    </div>
     <div class="shimg"><img src="${s.url}" alt="Resumo do treino para compartilhar"></div>
     <div class="bkbtns">${s.can?`<button class="primary" data-act="shsend">Compartilhar</button>`:""}<button class="${s.can?"sec":"primary"}" data-act="shsave">Salvar imagem</button><button class="sec" data-act="shclose">Fechar</button></div>
     ${s.msg?`<p class="note" role="status">${esc(s.msg)}</p>`:""}
@@ -3357,7 +3446,10 @@ view.addEventListener("click", e=>{
   else if(act==="share"){ openShare(+b.dataset.i); }
   else if(act==="shsend"){ shareSend(); }
   else if(act==="shsave"){ shareSave(); }
-  else if(act==="shclose"){ if(ui.share) URL.revokeObjectURL(ui.share.url); ui.share = null; render(); }
+  else if(act==="shclose"){ shareFechar(); render(); }
+  else if(act==="shmodo" && ui.share){ const v = b.dataset.v; if(v==="foto" && !ui.share.foto){ shareEscolherFoto(); return; } if(ui.share.modo!==v){ ui.share.modo = v; gerarShare(); } }
+  else if(act==="shfmt" && ui.share){ if(ui.share.fmt!==b.dataset.v){ ui.share.fmt = b.dataset.v; gerarShare(); } }
+  else if(act==="shfoto" && ui.share){ shareEscolherFoto(); }
   else if(act==="barw"){ (state.cfg.bars = state.cfg.bars||{})[b.dataset.id] = +b.dataset.v; save(); render(); }
   else if(act==="cancel"){
     if(!state.session.confirmCancel){ state.session.confirmCancel = true; render(); return; }
