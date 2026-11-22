@@ -1770,6 +1770,7 @@ function render(){
   else if(sheetNovo) v.querySelector(".sheet2")?.classList.add("troca");
   if(profNovo) $("#over").querySelectorAll(".pfsheet,.scrim2").forEach(x=>x.classList.add("in"));
   lastTela = {...tela, prof:!!ui.prof};
+  ui.trVolta = false;
   EXA.mount(v);
   if(typeof syncWake==="function") syncWake();
 }
@@ -1786,6 +1787,7 @@ function telaAtual(inSession){
   return {k, view:state.view, fundo, sheet: inSession && S.sheet ? S.sheet : "", sess: inSession, ei: inSession && pos(S) ? pos(S).ei : -1};
 }
 function transicao(a, b){
+  if(ui.trVolta){ ui.trVolta = false; return "pop"; }
   if(a.view!==b.view || a.sess!==b.sess) return "fade";            // trocar de aba, começar ou sair do treino
   if(b.sess) return a.ei!==b.ei ? "push" : "soft";                  // próximo exercício desliza; série e descanso esmaecem
   if(b.fundo>a.fundo) return "push";                                // entrar numa subtela
@@ -2128,11 +2130,34 @@ function registrarSerie(){
   const before = priorSets(en.id), pr = before.length ? recordOf([...before, ...en.sets.filter(x=>x.done && worked(x))], st.kg, st.reps) : null;
   if(pr){ st.pr = pr; S.flash = {id:en.id, kg:st.kg, reps:st.reps}; try{ navigator.vibrate && navigator.vibrate([60,50,160]); }catch(e){} } else { delete st.pr; S.flash = null; }
   S.lastReg = {ei:p.ei, si:p.si, t:Date.now()};
+  (S.regs = S.regs||[]).push({ei:p.ei, si:p.si}); if(S.regs.length>60) S.regs.shift();
   st.done = true; delete st.t; S.sheet = null; S.confirmCancel = false;
   if(en.sets.every(x=>x.done)) S.cur = null;
+  if(S.voltar!=null){ const v = S.entries[S.voltar]; if(v && v.sets.some(x=>!x.done)) S.cur = S.voltar; delete S.voltar; }
   if(pos(S)){ const sec = restSec(en); S.phase = "rest"; S.restTotal = sec; S.restUntil = Date.now()+sec*1000; ensureTick(); }
   else { S.phase = "done"; S.review = true; stopTimer(); }
   save(); render();
+}
+
+// ---------- Voltar para a série anterior (seta do topo durante o treino) ----------
+// Reabre a última série registrada com os valores lançados; ao registrar de novo, o treino segue de onde estava.
+function ultimaFeita(S){
+  const pilha = (S.regs||[]).filter(r=>S.entries[r.ei] && S.entries[r.ei].sets[r.si] && S.entries[r.ei].sets[r.si].done);
+  if(pilha.length) return pilha[pilha.length-1];
+  const L = S.lastReg; return L && S.entries[L.ei] && S.entries[L.ei].sets[L.si] && S.entries[L.ei].sets[L.si].done ? L : null;
+}
+function voltarSerie(S){
+  const r = ultimaFeita(S); if(!r) return false;
+  const p = pos(S); if(S.voltar==null && p && p.ei!==r.ei) S.voltar = p.ei;
+  if(S.regs){ const k = S.regs.map(x=>x.ei+"."+x.si).lastIndexOf(r.ei+"."+r.si); if(k>=0) S.regs.splice(k,1); }
+  const st = S.entries[r.ei].sets[r.si];
+  st.done = false; st.t = true; delete st.pr;
+  if(S.flash && S.flash.id===S.entries[r.ei].id) S.flash = null;
+  S.cur = r.ei; S.phase = "set"; S.sheet = null; S.review = false; stopTimer();
+  const ant = ultimaFeita(S); S.lastReg = ant ? {...ant, t:0} : null;
+  ui.vozMsg = null; ui.trVolta = true;
+  save(); render(); window.scrollTo({top:0});
+  return true;
 }
 
 // ---------- Corrigir a série anterior (voz que entendeu errado ou toque errado) ----------
@@ -2550,7 +2575,7 @@ const icon = (d)=>`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/><
 
 function topBar(s, label, segs){
   return `<div class="ptop">
-    <button class="icon" data-act="pback" aria-label="Voltar para Hoje">${icon("M15 5l-7 7 7 7")}</button>
+    <button class="icon" data-act="pback" aria-label="${ultimaFeita(s)?"Voltar para a série anterior":"Voltar para Hoje"}">${icon("M15 5l-7 7 7 7")}</button>
     <div class="pmid"><span>${label}</span>${segs}</div>
     <button class="icon" data-act="pmenu" aria-label="Opções do treino">${icon("M5 12h.01M12 12h.01M19 12h.01")}</button>
   </div>`;
@@ -2614,6 +2639,7 @@ function renderSheet(s, p){
     <button class="sheetbtn" data-act="addset" data-e="${p.ei}">Fazer mais uma série</button>
     ${s.lastReg && s.entries[s.lastReg.ei] && s.entries[s.lastReg.ei].sets[s.lastReg.si] ? `<button class="sheetbtn" data-act="sheet" data-s="corrigir">Corrigir a série anterior</button>` : ""}
     ${FB_ON && IA_PRONTA?`<button class="sheetbtn" data-act="sheet" data-s="duvida">Tirar dúvida sobre o exercício</button>`:""}
+    <button class="sheetbtn" data-act="phome">Ir para a tela Hoje (o treino continua)</button>
     <button class="sheetbtn" data-act="sheet" data-s="end">Encerrar treino</button>`;
   else if(s.sheet==="ficha") body = `<h3>Qual exercício agora?</h3><p class="note">Faça na ordem que quiser. O que ficar para trás continua na lista.</p><div class="fichalist">${s.entries.map((en,ei)=>{ const dn = en.sets.filter(x=>x.done).length, all = dn===en.sets.length, cur = ei===p.ei;
       return `<button class="sheetbtn frow${cur?" on":""}" data-act="jump" data-e="${ei}" ${all?"disabled":""}><canvas class="anim thumb" data-ex="${en.id}" data-off="${ei*300}" aria-hidden="true"></canvas><span class="mt"><b>${esc(BY[en.id].name)}</b><small>${all?"Feito":cur?`Agora · ${dn} de ${en.sets.length} séries`:dn?`${dn} de ${en.sets.length} séries`:`${en.sets.length} séries`}</small></span>${all?ICO.check:""}</button>`;}).join("")}</div>`;
@@ -3220,7 +3246,8 @@ view.addEventListener("click", e=>{
   }
   if(act==="rest15"){ S.restUntil += 15000; S.restTotal = (S.restTotal||90)+15; save(); tick(); return; }
   if(act==="restskip"){ S.phase = "set"; stopTimer(); save(); render(); return; }
-  if(act==="pback"){ ui.min = true; S.sheet = null; render(); return; }
+  if(act==="pback"){ if(S && voltarSerie(S)) return; ui.min = true; S.sheet = null; render(); return; }
+  if(act==="phome"){ ui.min = true; S.sheet = null; render(); return; }
   if(act==="cont"){ ui.min = false; render(); window.scrollTo({top:0}); return; }
   if(act==="pmenu"){ S.sheet = "menu"; render(); return; }
   if(act==="sheet"){ S.sheet = b.dataset.s; render(); return; }
