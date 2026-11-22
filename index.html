@@ -3243,6 +3243,10 @@ async function drawSharePhoto(h, recs, img, fmt, tpl, titulo){
   const k = Math.max(W/img.naturalWidth, H/img.naturalHeight), iw = img.naturalWidth*k, ih = img.naturalHeight*k;
   x.fillStyle = "#141414"; x.fillRect(0,0,W,H);
   x.drawImage(img, (W-iw)/2, (H-ih)/2, iw, ih);
+  // vinheta: escurece bordas e cantos e deixa o centro da foto em destaque
+  const vr = Math.hypot(W, H)/2, vg = x.createRadialGradient(W/2, H*.42, vr*.42, W/2, H*.42, vr*1.02);
+  vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(.6, "rgba(0,0,0,.18)"); vg.addColorStop(1, "rgba(0,0,0,.62)");
+  x.fillStyle = vg; x.fillRect(0, 0, W, H);
   let g = x.createLinearGradient(0,0,0,300); g.addColorStop(0,"rgba(0,0,0,.55)"); g.addColorStop(1,"rgba(0,0,0,0)"); x.fillStyle = g; x.fillRect(0,0,W,300);
   if(tpl!=="exercicios"){ const gy = H*(feed ? .38 : .48); g = x.createLinearGradient(0,gy,0,H); g.addColorStop(0,"rgba(0,0,0,0)"); g.addColorStop(.45,"rgba(0,0,0,.55)"); g.addColorStop(1,"rgba(0,0,0,.86)"); x.fillStyle = g; x.fillRect(0,gy,W,H-gy); }
   const logo = await loadLogo();
