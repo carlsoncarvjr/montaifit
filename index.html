@@ -3100,7 +3100,7 @@ async function drawShare(h, recs){
   if(wk.streak>=2){ x.fillStyle = AC; font(700, 40); x.textAlign = "right"; x.fillText(weeksTxt(wk.streak), W-P, 318); x.textAlign = "left"; }
   // título
   const d = new Date(h.date), sets = h.entries.flatMap(e=>e.sets), vol = sets.reduce((a,s)=>a+toNum(s.kg)*toNum(s.reps),0);
-  const title = h.dayType && !["Personal","Meu treino"].includes(h.dayType) ? h.dayType : h.dayName;
+  const title = (ui.share && ui.share.titulo) || tituloTreino(h);
   x.textBaseline = "alphabetic"; x.fillStyle = MU; font(600, 42);
   x.fillText(`Treino concluído · ${d.toLocaleDateString("pt-BR",{day:"numeric",month:"long"})}`, P, 510);
   x.fillStyle = FG; let size = 132; font(800, size);
@@ -3151,7 +3151,7 @@ async function drawShare(h, recs){
 async function openShare(i){
   const h = state.history[i]; if(!h) return;
   shareFechar();
-  ui.share = {i, modo:"cartao", fmt:"story", msg:""};
+  ui.share = {i, modo:"cartao", fmt:"story", tpl:"completo", titulo:tituloTreino(h), msg:""};
   await gerarShare();
 }
 // Gera a imagem do modo atual: cartão escuro ou a foto da pessoa com os números por cima.
@@ -3160,7 +3160,7 @@ async function gerarShare(){
   const h = state.history[s.i]; if(!h) return;
   const recs = histRecords()[s.i]||[];
   const foto = s.modo==="foto" && s.foto;
-  const cv = foto ? await drawSharePhoto(h, recs, s.foto, s.fmt) : await drawShare(h, recs);
+  const cv = foto ? await drawSharePhoto(h, recs, s.foto, s.fmt, s.tpl, s.titulo) : await drawShare(h, recs);
   const tipo = foto ? "image/jpeg" : "image/png";
   const blob = await new Promise(res=>cv.toBlob(res, tipo, .9));
   if(!blob || ui.share!==s) return;
@@ -3187,39 +3187,109 @@ function shareEscolherFoto(){
   }
   shFotoIn.click();
 }
-// Foto do treino com os números por cima (formato Stories 9:16 ou Feed 4:5).
-async function drawSharePhoto(h, recs, img, fmt){
+// ---------- Nome do treino para postar: pelos músculos, quando o nome é genérico ----------
+const GENERICO = /^(meu treino [a-z]|treino [a-f]|treino de hoje|treino da ia|meu treino)$/i;
+const PERNA = ["quad","post","glut","adut","pant"];
+// [{id, n}] → grupos ordenados por séries, com pernas juntas
+function gruposDe(lista){
+  const by = {};
+  for(const {id, n} of lista){ const e = BY[id]; if(!e || !n) continue; by[e.g] = (by[e.g]||0) + n; }
+  const perna = PERNA.reduce((a,g)=>a+(by[g]||0), 0), glut = by.glut||0;
+  const out = Object.entries(by).filter(([g])=>!PERNA.includes(g)).map(([g,n])=>({g, nome:GROUPS[g], n}));
+  if(perna) out.push({g:"perna", nome: glut >= perna*.5 ? "Glúteos" : "Pernas", n:perna});
+  out.sort((a,b)=>b.n-a.n);
+  const semCore = out.filter(x=>x.g!=="core");
+  return semCore.length ? [...semCore, ...out.filter(x=>x.g==="core")] : out;
+}
+const listaDoTreino = h=>h.entries.map(e=>({id:e.id, n:(e.sets||[]).length}));
+function nomeMusculos(gr){
+  const top = gr.filter(x=>x.g!=="core" || gr.length===1).slice(0,3).map(x=>x.nome);
+  if(!top.length) return "";
+  const low = t=>t.charAt(0).toLowerCase()+t.slice(1);
+  return top.length===1 ? top[0] : top.slice(0,-1).map((t,i)=>i?low(t):t).join(", ") + " e " + low(top[top.length-1]);
+}
+function diaDe(gr){
+  const gs = gr.filter(x=>x.g!=="core").map(x=>x.g); if(!gs.length) return "";
+  if(gs.every(g=>g==="biceps"||g==="triceps")) return "Dia de braço";
+  if(gs.length===1) return {perna:"Dia de perna", peito:"Dia de peito", costas:"Dia de costas", ombros:"Dia de ombro"}[gs[0]] || "";
+  return "";
+}
+function nomeOriginal(h){ return h.dayType && !["Personal","Meu treino"].includes(h.dayType) ? h.dayType : h.dayName; }
+function opcoesTitulo(h){
+  const gr = gruposDe(listaDoTreino(h)), auto = nomeMusculos(gr), dia = diaDe(gr), orig = String(nomeOriginal(h)||"").trim();
+  const curto = dia ? dia.replace(/^Dia de /,"").replace(/^./,c=>c.toUpperCase()) : auto;
+  const ops = [];
+  if(orig && !GENERICO.test(orig)) ops.push(orig);
+  if(auto) ops.push(auto);
+  if(dia) ops.push(dia);
+  if(h.dur && curto) ops.push(`${curto} em ${h.dur} min`);
+  if(!ops.length) ops.push(orig || "Treino concluído");
+  return [...new Set(ops)];
+}
+const tituloTreino = h=>opcoesTitulo(h)[0];
+const linhaMusculos = h=>gruposDe(listaDoTreino(h)).filter(x=>x.n>=2).slice(0,4).map(x=>x.nome).join(" · ");
+function melhorSerie(e){
+  const ok = (e.sets||[]).filter(st=>toNum(st.reps)>0); if(!ok.length) return null;
+  const b = ok.reduce((a,st)=>(toNum(st.kg)>toNum(a.kg) || (toNum(st.kg)===toNum(a.kg) && toNum(st.reps)>toNum(a.reps))) ? st : a, ok[0]);
+  return toNum(b.kg) ? `${fmtKg(toNum(b.kg))} kg × ${b.reps}` : `${b.reps} reps`;
+}
+// Foto do treino com os números por cima. Modelos: completo, minimal e exercícios; formato Stories 9:16 ou Feed 4:5.
+async function drawSharePhoto(h, recs, img, fmt, tpl, titulo){
   const W = 1080, H = fmt==="feed" ? 1350 : 1920, c = document.createElement("canvas"); c.width = W; c.height = H;
-  const x = c.getContext("2d"), FG = "#FFFFFF", MU = "rgba(255,255,255,.78)", AC = "#FF751F", P = 80;
+  const x = c.getContext("2d"), FG = "#FFFFFF", MU = "rgba(255,255,255,.78)", AC = "#FF751F", P = 80, feed = fmt==="feed";
   try{ await Promise.all([document.fonts.load("800 100px Inter"), document.fonts.load("600 40px Inter")]); }catch(e){}
   const font = (w,sz)=>{ x.font = `${w} ${sz}px Inter, system-ui, -apple-system, sans-serif`; };
-  // foto cobrindo tudo, centralizada
+  const corta = (t, max)=>{ t = String(t); while(x.measureText(t).width>max && t.length>4) t = t.slice(0,-2).trimEnd()+"…"; return t; };
   const k = Math.max(W/img.naturalWidth, H/img.naturalHeight), iw = img.naturalWidth*k, ih = img.naturalHeight*k;
   x.fillStyle = "#141414"; x.fillRect(0,0,W,H);
   x.drawImage(img, (W-iw)/2, (H-ih)/2, iw, ih);
-  // sombras para o texto ficar legível em qualquer foto
   let g = x.createLinearGradient(0,0,0,300); g.addColorStop(0,"rgba(0,0,0,.55)"); g.addColorStop(1,"rgba(0,0,0,0)"); x.fillStyle = g; x.fillRect(0,0,W,300);
-  const gy = H*(fmt==="feed" ? .38 : .48); g = x.createLinearGradient(0,gy,0,H); g.addColorStop(0,"rgba(0,0,0,0)"); g.addColorStop(.45,"rgba(0,0,0,.55)"); g.addColorStop(1,"rgba(0,0,0,.86)");
-  x.fillStyle = g; x.fillRect(0,gy,W,H-gy);
+  if(tpl!=="exercicios"){ const gy = H*(feed ? .38 : .48); g = x.createLinearGradient(0,gy,0,H); g.addColorStop(0,"rgba(0,0,0,0)"); g.addColorStop(.45,"rgba(0,0,0,.55)"); g.addColorStop(1,"rgba(0,0,0,.86)"); x.fillStyle = g; x.fillRect(0,gy,W,H-gy); }
   const logo = await loadLogo();
-  if(logo){ const lw = 300; x.drawImage(logo, P-12, fmt==="feed" ? 64 : 120, lw, lw*logo.height/logo.width); }
-  // números
+  if(logo){ const lw = 300; x.drawImage(logo, P-12, feed ? 64 : 120, lw, lw*logo.height/logo.width); }
   const d = new Date(h.date), sets = h.entries.flatMap(e=>e.sets), vol = sets.reduce((a,st)=>a+toNum(st.kg)*toNum(st.reps),0);
-  const title = h.dayType && !["Personal","Meu treino"].includes(h.dayType) ? h.dayType : h.dayName;
-  const stats = [...(vol ? [["Volume", Math.round(vol).toLocaleString("pt-BR"), "kg"]] : []), ...(h.dur ? [["Tempo", String(h.dur), "min"]] : []),
-    ["Séries", String(sets.length), ""], ["Exercícios", String(h.entries.filter(e=>e.sets.length).length), ""]].slice(0,4);
+  const title = titulo || tituloTreino(h), musc = linhaMusculos(h), data = `Treino concluído · ${d.toLocaleDateString("pt-BR",{day:"numeric",month:"long"})}`;
+  const nEx = h.entries.filter(e=>e.sets.length).length;
   x.textBaseline = "alphabetic"; x.textAlign = "left";
-  let y = H - (fmt==="feed" ? 80 : 150);
-  // recorde (linha de destaque)
-  if(recs.length){
-    const r = recs[0], val = `${toNum(r.kg)?`${fmtKg(toNum(r.kg))} kg × `:""}${r.reps}${toNum(r.kg)?"":" reps"}`;
-    font(800, 40); x.fillStyle = AC; const lb = recs.length>1 ? `${recs.length} recordes` : "Novo recorde";
-    x.fillText(lb, P, y); const lw = x.measureText(lb+"  ").width;
-    font(600, 40); x.fillStyle = FG; let nm = `${BY[r.id]?.name||r.id} · ${val}`; while(x.measureText(nm).width>W-2*P-lw && nm.length>6) nm = nm.slice(0,-2).trimEnd()+"…";
-    x.fillText(nm, P+lw, y); y -= 96;
+
+  if(tpl==="minimal"){
+    let y = H - (feed ? 90 : 160);
+    if(musc){ x.fillStyle = AC; font(700, 38); x.fillText(corta(musc, W-2*P), P, y); y -= 70; }
+    x.fillStyle = FG; font(800, 64); x.fillText(corta(title, W-2*P), P, y); y -= 64 + 40;
+    const big = vol ? Math.round(vol).toLocaleString("pt-BR") : String(sets.length);
+    let sz = 230; font(800, sz); while(x.measureText(big).width > W-2*P-170 && sz>120){ sz -= 10; font(800, sz); }
+    x.fillText(big, P-6, y); const bw = x.measureText(big).width;
+    font(800, sz*.36); x.fillText(vol ? "kg" : "séries", P-6+bw+16, y);
+    y -= sz + 18; x.fillStyle = MU; font(600, 38); x.fillText(data, P, y);
+    return c;
   }
-  // linha de números
-  // cada coluna ocupa a largura do próprio número; se não couber, a fonte diminui
+
+  if(tpl==="exercicios"){
+    const rows = h.entries.filter(e=>e.sets.length).slice(0, feed ? 5 : 7), RH = 66;
+    const head = 34+24+80+(musc?52:0)+36, foot = 96, ph = head + rows.length*RH + foot, py = H - (feed ? 60 : 120) - ph, pw = W-2*(P-24);
+    x.fillStyle = "rgba(14,14,14,.78)"; x.beginPath(); x.roundRect(P-24, py, pw, ph, 36); x.fill();
+    let y = py + 34 + 34; x.fillStyle = MU; font(600, 34); x.fillText(data, P+12, y);
+    y += 80; x.fillStyle = FG; font(800, 68); x.fillText(corta(title, pw-60), P+12, y);
+    if(musc){ y += 52; x.fillStyle = AC; font(700, 34); x.fillText(corta(musc, pw-60), P+12, y); }
+    y += 36;
+    for(const e of rows){
+      y += RH; const val = melhorSerie(e) || "";
+      font(800, 38); x.fillStyle = FG; const vw = x.measureText(val).width; x.textAlign = "right"; x.fillText(val, W-P-12, y); x.textAlign = "left";
+      font(600, 38); x.fillStyle = "rgba(255,255,255,.9)"; x.fillText(corta(BY[e.id]?.name||e.id, pw-vw-110), P+12, y);
+    }
+    y += foot - 18; x.fillStyle = MU; font(600, 34);
+    x.fillText([h.dur?`${h.dur} min`:"", `${sets.length} séries`, vol?`${Math.round(vol).toLocaleString("pt-BR")} kg`:"", nEx>rows.length?`+${nEx-rows.length} exercício${nEx-rows.length>1?"s":""}`:""].filter(Boolean).join("  ·  "), P+12, y);
+    return c;
+  }
+
+  // completo
+  const stats = [...(vol ? [["Volume", Math.round(vol).toLocaleString("pt-BR"), "kg"]] : []), ...(h.dur ? [["Tempo", String(h.dur), "min"]] : []),
+    ["Séries", String(sets.length), ""], ["Exercícios", String(nEx), ""]].slice(0,4);
+  let y = H - (feed ? 80 : 150);
+  // destaque: recorde, ou a melhor série do dia
+  const dest = recs.length ? (()=>{ const r = recs[0]; return [recs.length>1 ? `${recs.length} recordes` : "Novo recorde", `${BY[r.id]?.name||r.id} · ${toNum(r.kg)?`${fmtKg(toNum(r.kg))} kg × `:""}${r.reps}${toNum(r.kg)?"":" reps"}`]; })()
+    : (()=>{ const e = h.entries.filter(e=>e.sets.some(st=>toNum(st.kg))).sort((a,b)=>Math.max(...b.sets.map(st=>toNum(st.kg)))-Math.max(...a.sets.map(st=>toNum(st.kg))))[0]; return e ? ["Mais pesado", `${BY[e.id]?.name||e.id} · ${melhorSerie(e)}`] : null; })();
+  if(dest){ font(800, 38); x.fillStyle = AC; x.fillText(dest[0], P, y); const lw = x.measureText(dest[0]+"  ").width; font(600, 38); x.fillStyle = FG; x.fillText(corta(dest[1], W-2*P-lw), P+lw, y); y -= 96; }
   let big = 92; const GAP = 64;
   const larg = sz=>stats.map(([lab, n, un])=>{ font(800, sz); let w = x.measureText(n).width; if(un){ font(700, sz*.45); w += 10 + x.measureText(un).width; } font(600, 34); return Math.max(w, x.measureText(lab).width); });
   let ws = larg(big); while(ws.reduce((a,v)=>a+v,0) + GAP*(stats.length-1) > W-2*P && big>56){ big -= 4; ws = larg(big); }
@@ -3231,12 +3301,9 @@ async function drawSharePhoto(h, recs, img, fmt){
     px += ws[i] + GAP;
   });
   y -= big + 8 + 34 + 56;
-  // título e data
-  font(800, 96); x.fillStyle = FG;
-  let t = String(title); while(x.measureText(t).width>W-2*P && t.length>6) t = t.slice(0,-2).trimEnd()+"…";
-  x.fillText(t, P, y); y -= 96 + 8;
-  x.fillStyle = MU; font(600, 38);
-  x.fillText(`Treino concluído · ${d.toLocaleDateString("pt-BR",{day:"numeric",month:"long"})}`, P, y);
+  if(musc){ x.fillStyle = AC; font(700, 36); x.fillText(corta(musc, W-2*P), P, y); y -= 36 + 28; }
+  font(800, 96); x.fillStyle = FG; x.fillText(corta(title, W-2*P), P, y); y -= 96 + 8;
+  x.fillStyle = MU; font(600, 38); x.fillText(data, P, y);
   return c;
 }
 function renderShare(){
@@ -3247,6 +3314,9 @@ function renderShare(){
       <button class="chip" data-act="shmodo" data-v="foto" aria-pressed="${s.modo==="foto"}">${s.foto?"Com sua foto":"Usar uma foto"}</button>
       ${s.modo==="foto" && s.foto ? `<button class="chip" data-act="shfmt" data-v="story" aria-pressed="${s.fmt!=="feed"}">Stories</button><button class="chip" data-act="shfmt" data-v="feed" aria-pressed="${s.fmt==="feed"}">Feed</button><button class="chip" data-act="shfoto">Trocar foto</button>` : ""}
     </div>
+    ${s.modo==="foto" && s.foto ? `<div class="shmodos" role="group" aria-label="Modelo">${[["completo","Completo"],["minimal","Minimalista"],["exercicios","Exercícios"]].map(([v,l])=>`<button class="chip" data-act="shtpl" data-v="${v}" aria-pressed="${s.tpl===v}">${l}</button>`).join("")}</div>` : ""}
+    <div class="shmodos" role="group" aria-label="Nome do treino">${opcoesTitulo(state.history[s.i]).map(t=>`<button class="chip" data-act="shtit" data-v="${esc(t)}" aria-pressed="${s.titulo===t}">${esc(t)}</button>`).join("")}<button class="chip" data-act="shtitedit" aria-pressed="${!!s.editTit}">Escrever</button></div>
+    ${s.editTit ? `<form class="shmodos" id="shtitform"><input id="shtittxt" maxlength="40" value="${esc(s.titulo||"")}" aria-label="Nome do treino" style="flex:1;min-width:0;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:8px 12px;color:var(--fg);font:inherit"><button class="chip">Usar</button></form>` : ""}
     <div class="shimg"><img src="${s.url}" alt="Resumo do treino para compartilhar"></div>
     <div class="bkbtns">${s.can?`<button class="primary" data-act="shsend">Compartilhar</button>`:""}<button class="${s.can?"sec":"primary"}" data-act="shsave">Salvar imagem</button><button class="sec" data-act="shclose">Fechar</button></div>
     ${s.msg?`<p class="note" role="status">${esc(s.msg)}</p>`:""}
@@ -3377,7 +3447,8 @@ view.addEventListener("click", e=>{
   if(act==="mswapopen"){ const i = +b.dataset.i; ui.swapOpen = ui.swapOpen===i ? null : i; render(); return; }
   if(act==="mswap"){ const it = ui.draft.items[+b.dataset.i]; dislike(it.id); it.id = b.dataset.id; ui.swapOpen = null; render(); return; }
   if(act==="mdel"){ ui.draft.items.splice(+b.dataset.i,1); ui.editIdx = null; render(); return; }
-  if(act==="savemine"){ const m = ui.draft; m.name = m.name.trim() || `Meu treino ${String.fromCharCode(64+state.mine.length+1)}`;
+  if(act==="savemine"){ const m = ui.draft; m.name = m.name.trim();
+    if(!m.name || /^Meu treino [A-Z]$/.test(m.name)) m.name = nomeMusculos(gruposDe(m.items.map(it=>({id:it.id, n:+it.sets||1})))) || `Meu treino ${String.fromCharCode(64+state.mine.length+1)}`;
     const k = state.mine.findIndex(x=>x.id===m.id); if(k>=0) state.mine[k] = m; else state.mine.push(m);
     ui.planSub = null; ui.draft = null; ui.editIdx = null; save(); render(); window.scrollTo({top:0}); return; }
   if(act==="hojemine"){ const m = ui.draft; const k = state.mine.findIndex(x=>x.id===m.id); if(k>=0) state.mine[k] = m;
@@ -3448,6 +3519,9 @@ view.addEventListener("click", e=>{
   else if(act==="shsave"){ shareSave(); }
   else if(act==="shclose"){ shareFechar(); render(); }
   else if(act==="shmodo" && ui.share){ const v = b.dataset.v; if(v==="foto" && !ui.share.foto){ shareEscolherFoto(); return; } if(ui.share.modo!==v){ ui.share.modo = v; gerarShare(); } }
+  else if(act==="shtpl" && ui.share){ if(ui.share.tpl!==b.dataset.v){ ui.share.tpl = b.dataset.v; gerarShare(); } }
+  else if(act==="shtit" && ui.share){ ui.share.editTit = false; if(ui.share.titulo!==b.dataset.v){ ui.share.titulo = b.dataset.v; gerarShare(); } else render(); }
+  else if(act==="shtitedit" && ui.share){ ui.share.editTit = !ui.share.editTit; render(); if(ui.share.editTit) $("#shtittxt")?.focus(); }
   else if(act==="shfmt" && ui.share){ if(ui.share.fmt!==b.dataset.v){ ui.share.fmt = b.dataset.v; gerarShare(); } }
   else if(act==="shfoto" && ui.share){ shareEscolherFoto(); }
   else if(act==="barw"){ (state.cfg.bars = state.cfg.bars||{})[b.dataset.id] = +b.dataset.v; save(); render(); }
@@ -3471,6 +3545,7 @@ view.addEventListener("change", e=>{
   else if(act==="reps"||act==="rest"){ d.items[+el.dataset.i][act] = el.value; d.items[+el.dataset.i].mao = true; save(); }
 });
 view.addEventListener("submit", e=>{
+  if(e.target.id==="shtitform"){ e.preventDefault(); const t = ($("#shtittxt")?.value||"").trim().slice(0,40); if(ui.share && t){ ui.share.titulo = t; ui.share.editTit = false; gerarShare(); } return; }
   if(e.target.id==="duvform"){ e.preventDefault(); const q = ($("#duvtxt")?.value||"").trim(); if(q.length>=3) duvidaPerguntar(q); return; }
   if(e.target.id!=="plform") return;
   e.preventDefault();
