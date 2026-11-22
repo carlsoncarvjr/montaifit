@@ -431,6 +431,23 @@ header.top{flex-wrap:nowrap}
 .ianota p{margin:0;color:var(--muted);font-size:.92rem;line-height:1.45}
 .goalnote{margin:0 0 12px;max-width:60ch}
 .iaplanbtn{margin:0 0 12px}
+.fichalink{display:flex;align-items:center;gap:8px;margin:-2px 0 14px}
+.fichalink svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
+.regrow{display:flex;gap:10px;align-items:stretch;margin-top:6px}
+.regrow .pbtn{flex:1;margin-top:0}
+.mic{flex:none;width:58px;height:58px;border-radius:16px;border:none;background:var(--surface-2);color:var(--fg);display:grid;place-items:center;padding:0}
+.mic svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.mic.on{background:var(--accent);color:var(--accent-ink);animation:micpulse 1.2s ease-in-out infinite}
+@keyframes micpulse{50%{box-shadow:0 0 0 8px rgba(255,117,31,.18)}}
+@media (prefers-reduced-motion:reduce){.mic.on{animation:none}}
+.vozlive{text-align:center;color:var(--muted);font-size:.9rem;margin:10px 0 0;min-height:1.3em}
+.vozok{display:flex;justify-content:center;gap:6px;align-items:center;color:var(--ok);font-size:.9rem;margin:0 0 6px}
+.duvresp{background:var(--surface-2);border-radius:14px;padding:12px 14px}
+.duvresp b{display:block;font-size:.85rem;margin-bottom:4px}
+.duvresp p{margin:0;color:var(--fg);font-size:.95rem;line-height:1.45}
+.duvform{display:flex;gap:8px}
+.duvform input{flex:1;min-width:0;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;color:var(--fg);font:inherit}
+.fichawait{display:flex;flex-direction:column;gap:12px;align-items:flex-start}
 .iaajuste{display:flex;gap:8px;align-items:flex-start;margin:10px 0 0;color:var(--muted);font-size:.86rem;line-height:1.4}
 .iaajuste svg{flex:none;width:16px;height:16px;margin-top:2px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
 .iaajuste .linkbtn{font-size:.86rem;padding:0;margin-left:4px;min-height:0}
@@ -1693,7 +1710,7 @@ function render(){
   $("#cfgSum").textContent = [opt("goal"), `${state.cfg.days} dias`, opt("time"), state.cfg.enf!=="none"?`ênfase: ${opt("enf")}`:""].filter(Boolean).join(" · ");
   document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected", t.dataset.view===state.view));
   const inSession = !!state.session && state.view==="treinar" && !ui.min;
-  const sub = state.view==="plano" && ui.planSub ? (ui.planSub.kind==="sug" ? "Treino sugerido" : ui.planSub.kind==="ia" ? "Treino de hoje" : ui.planSub.kind==="iaplano" ? "Mudar meu plano" : "Montar treino") : null;
+  const sub = state.view==="plano" && ui.planSub ? (ui.planSub.kind==="sug" ? "Treino sugerido" : ui.planSub.kind==="ia" ? "Treino de hoje" : ui.planSub.kind==="iaplano" ? "Mudar meu plano" : ui.planSub.kind==="ficha" ? "Importar ficha" : "Montar treino") : null;
   $("#ptitle").textContent = sub || {plano:"Plano", objetivo:"Objetivo", historico:"Histórico"}[state.view] || "Treino";
   paintHeader(state.view==="treinar" && !sub);
   $("#smoke").hidden = false; $("#smoke").classList.toggle("soft", state.view!=="treinar");
@@ -1725,6 +1742,7 @@ function renderPlan(){
   if(ui.planSub.kind==="sug") return renderPlanSug();
   if(ui.planSub.kind==="ia") return renderIA();
   if(ui.planSub.kind==="iaplano") return renderIAPlano();
+  if(ui.planSub.kind==="ficha") return renderFicha();
   return renderMine() + (ui.cat ? renderCatalog() : "");
 }
 function renderPlanHome(){
@@ -1734,7 +1752,7 @@ function renderPlanHome(){
     <button class="sugcard2" data-act="opensug"><img src="img/capa.jpg" alt="" aria-hidden="true">
       <span class="sgtxt"><small>Treino sugerido</small><b>Plano de ${n} dias</b><small class="sggoal">${esc($("#cfgSum").textContent)}</small></span><span class="chev" aria-hidden="true">${ICO.right}</span></button>
     <button class="linkbtn goallink" data-act="gogoal">Mudar objetivo, dias ou foco</button>
-    ${FB_ON && IA_PRONTA?`<button class="sec pbtn iabtn iaplanbtn" data-act="openiaplano">${IA_ICO} Mudar meu plano com IA</button>`:""}
+    ${FB_ON && IA_PRONTA?`<button class="sec pbtn iabtn iaplanbtn" data-act="openiaplano">${IA_ICO} Mudar meu plano com IA</button><button class="linkbtn fichalink" data-act="fichapick">${CAM_ICO} Importar a ficha da academia por foto</button>`:""}
     <h2 class="sech">Meus treinos</h2>
     ${state.mine.length ? `<div class="mylist">${state.mine.map(m=>`<button class="myrow" data-act="openmine" data-id="${m.id}">${DUMB}<span class="mt"><b>${esc(m.name)}</b><small>${m.items.length} exercícios${m.id===pickId?" · treino de hoje":""}</small></span><span class="chev" aria-hidden="true">${ICO.right}</span></button>`).join("")}</div>`
       : `<p class="note">Nenhum treino montado ainda.</p>`}
@@ -1866,7 +1884,7 @@ function planIAUndo(){
 }
 function renderPlanIANote(){
   const a = state.planIA;
-  return `<div class="iaplanote"><b>${IA_ICO} ${a.origem==="semana"?"Ajustei seu plano para esta semana":"Plano ajustado pela IA"}</b>
+  return `<div class="iaplanote"><b>${IA_ICO} ${a.origem==="semana"?"Ajustei seu plano para esta semana":a.origem==="ficha"?"Ficha da academia importada":"Plano ajustado pela IA"}</b>
     <p>${esc(a.origem==="semana" ? a.resumo + "." + (a.motivo ? " " + a.motivo + "." : "") : a.resumo)}</p>
     ${planIAUndoable()?`<button class="linkbtn" data-act="iadesfazer">Desfazer</button>`:""}</div>`;
 }
@@ -1883,6 +1901,179 @@ function aplicarRevisao(mudancas){
   }
   return feitas;
 }
+// ---------- Registrar série falando (reconhecimento de voz do próprio navegador, sem custo de IA) ----------
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const MIC_ICO = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21"/></svg>`;
+const CAM_ICO = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><circle cx="12" cy="13.5" r="3.5"/></svg>`;
+const NUM_PT = {zero:0,um:1,uma:1,dois:2,duas:2,tres:3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10,onze:11,doze:12,treze:13,catorze:14,quatorze:14,quinze:15,
+  dezesseis:16,dezasseis:16,dezessete:17,dezoito:18,dezenove:19,vinte:20,trinta:30,quarenta:40,cinquenta:50,sessenta:60,setenta:70,oitenta:80,noventa:90,cem:100,cento:100,duzentos:200,trezentos:300};
+// Lê a fala ("sessenta quilos, dez", "60 kg 10 repetições", "fiz doze", "22 e meio por 8") e devolve {kg, reps}.
+function lerFala(txt, semCarga){
+  const w = norm(txt).replace(/(\d),(\d)/g,"$1.$2").replace(/(\d)(kg|x)\b/g,"$1 $2").split(/[^a-z0-9.]+/).filter(Boolean);
+  const isN = x=>/^\d+(\.\d+)?$/.test(x) || x in NUM_PT, val = x=>/^\d/.test(x) ? parseFloat(x) : NUM_PT[x];
+  const nums = []; let i = 0;
+  while(i<w.length){
+    if(!isN(w[i])){ i++; continue; }
+    const antes = w[i-1]||"";
+    let v = val(w[i]); i++;
+    for(;;){
+      if(w[i]==="e" && w[i+1]==="meio"){ v += .5; i += 2; continue; }
+      if((w[i]==="virgula"||w[i]==="ponto") && w[i+1] && isN(w[i+1])){ v = parseFloat(Math.floor(v)+"."+String(val(w[i+1])).replace(".","")); i += 2; continue; }
+      if(w[i]==="e" && w[i+1] in NUM_PT){ const a = NUM_PT[w[i+1]]; if((v%100===0 && v>=100 && a<100) || (v%10===0 && v>=20 && v<100 && a<10)){ v += a; i += 2; continue; } }
+      break;
+    }
+    let u = "";
+    if(/^(kg|kgs|quilo|quilos|kilo|kilos|quilograma|quilogramas)$/.test(w[i]||"")){ u = "kg"; i++; }
+    else if(/^(rep|reps|repeticao|repeticoes|vez|vezes)$/.test(w[i]||"")){ u = "reps"; i++; }
+    else if(antes==="com") u = "kg";
+    else if(antes==="fiz") u = "reps";
+    nums.push({v, u});
+  }
+  let kg = nums.find(n=>n.u==="kg")?.v, reps = nums.find(n=>n.u==="reps")?.v;
+  const livres = nums.filter(n=>!n.u).map(n=>n.v);
+  if(kg==null && reps==null){
+    if(livres.length>=2 && !semCarga){ kg = livres[0]; reps = livres[1]; }
+    else if(livres.length>=2 && semCarga){ reps = livres[0]; }
+    else if(livres.length===1){ if(livres[0]<=40 || semCarga) reps = livres[0]; else kg = livres[0]; }
+  }
+  else if(reps==null && livres.length) reps = livres[0];
+  else if(kg==null && livres.length && !semCarga) kg = livres[0];
+  if(reps!=null && !(reps>=1 && reps<=100 && Number.isInteger(reps))) reps = null;
+  if(kg!=null && !(kg>=0 && kg<=500)) kg = null;
+  return kg==null && reps==null ? null : {kg, reps};
+}
+let rec = null;
+const vozMsg = ()=>ui.vozMsg && Date.now()-ui.vozMsg.t < 6000 ? ui.vozMsg.txt : "";
+function vozParar(){ if(rec){ try{ rec.abort(); }catch(e){} rec = null; } ui.voz = null; }
+function vozAlternar(){
+  if(!SR) return;
+  if(rec){ vozParar(); render(); return; }
+  let finais = null;
+  try{
+    rec = new SR(); rec.lang = "pt-BR"; rec.interimResults = true; rec.maxAlternatives = 3; rec.continuous = false;
+    rec.onresult = e=>{
+      const r = e.results[e.results.length-1];
+      if(ui.voz){ ui.voz.txt = r[0].transcript; const el = $("#voztxt"); if(el) el.textContent = r[0].transcript; }
+      if(r.isFinal) finais = Array.from(r).map(a=>a.transcript);
+    };
+    rec.onerror = e=>{ ui.vozOk = false; ui.vozMsg = {t:Date.now(), txt: e.error==="not-allowed"||e.error==="service-not-allowed" ? "Libere o microfone para este site nas configurações do navegador." : e.error==="no-speech" ? "Não ouvi nada. Toque no microfone e diga a carga e as repetições." : e.error==="aborted" ? "" : "Não deu para ouvir agora. Tente de novo."}; };
+    rec.onend = ()=>{ rec = null; ui.voz = null; if(finais) vozAplicar(finais); else render(); };
+    ui.voz = {txt:""}; ui.vozMsg = null; render();
+    rec.start();
+  }catch(e){ rec = null; ui.voz = null; ui.vozOk = false; ui.vozMsg = {t:Date.now(), txt:"O reconhecimento de voz não funcionou neste navegador."}; render(); }
+}
+function vozAplicar(falas){
+  const S = state.session, p = S && pos(S); if(!p || S.phase==="rest"){ render(); return; }
+  const en = S.entries[p.ei], st = draft(en, p.si), semCarga = BY[en.id].eq==="c" && !toNum(st.kg);
+  let r = null; for(const f of falas){ r = lerFala(f, semCarga); if(r && r.reps!=null) break; }
+  if(!r){ ui.vozOk = false; ui.vozMsg = {t:Date.now(), txt:`Não entendi “${falas[0]||""}”. Diga, por exemplo: “sessenta quilos, dez”.`}; render(); return; }
+  if(r.kg!=null) st.kg = fmtKg(r.kg);
+  if(r.reps!=null) st.reps = String(r.reps);
+  st.t = true;
+  if(r.reps==null){ ui.vozOk = false; ui.vozMsg = {t:Date.now(), txt:`Anotei ${fmtKg(r.kg)} kg. Agora diga as repetições ou toque em Registrar.`}; save(); render(); return; }
+  ui.vozOk = true; ui.vozMsg = {t:Date.now(), txt:`Registrado por voz: ${st.kg && toNum(st.kg) ? st.kg+" kg × " : ""}${st.reps}`};
+  registrarSerie();
+}
+function registrarSerie(){
+  const S = state.session, p = S && pos(S); if(!p) return;
+  const en = S.entries[p.ei], st = draft(en, p.si);
+  const before = priorSets(en.id), pr = before.length ? recordOf([...before, ...en.sets.filter(x=>x.done && worked(x))], st.kg, st.reps) : null;
+  if(pr){ st.pr = pr; S.flash = {id:en.id, kg:st.kg, reps:st.reps}; try{ navigator.vibrate && navigator.vibrate([60,50,160]); }catch(e){} } else { delete st.pr; S.flash = null; }
+  S.lastReg = {ei:p.ei, si:p.si, t:Date.now()};
+  st.done = true; delete st.t; S.sheet = null; S.confirmCancel = false;
+  if(en.sets.every(x=>x.done)) S.cur = null;
+  if(pos(S)){ const sec = restSec(en); S.phase = "rest"; S.restTotal = sec; S.restUntil = Date.now()+sec*1000; ensureTick(); }
+  else { S.phase = "done"; S.review = true; stopTimer(); }
+  save(); render();
+}
+
+// ---------- Tirar dúvida sobre o exercício (função duvidaExercicio): perguntas prontas, um toque ----------
+const DUV_CHIPS = ["Onde devo sentir?", "Como fazer certo?", "Qual carga usar hoje?", "Sinto na lombar", "Dói o ombro", "Dói o joelho", "Dói o punho", "Como respirar?"];
+function renderDuvida(en){
+  const e = BY[en.id], d = ui.duv && ui.duv.ex===en.id ? ui.duv : null;
+  return `<h3>Dúvida: ${esc(e.name)}</h3>
+    ${d ? `<div class="duvresp" role="status"><b>${esc(d.q)}</b><p>${d.busy ? "Pensando na resposta…" : esc(d.resp || d.err || "")}</p></div>` : `<p class="note">Escolha a pergunta. A resposta vem em poucas linhas.</p>`}
+    <div class="chips">${DUV_CHIPS.map(c=>`<button class="chip" data-act="duvq" data-v="${esc(c)}" ${d&&d.busy?"disabled":""}>${esc(c)}</button>`).join("")}</div>
+    <form id="duvform" class="duvform"><input id="duvtxt" maxlength="300" autocomplete="off" placeholder="Outra pergunta (opcional)" aria-label="Outra pergunta"><button class="sec" ${d&&d.busy?"disabled":""}>Perguntar</button></form>
+    <p class="note">Orientação geral: não substitui um profissional de educação física ou de saúde.</p>`;
+}
+async function duvidaPerguntar(q){
+  const S = state.session, p = S && pos(S); if(!p) return;
+  const en = S.entries[p.ei], e = BY[en.id], key = en.id+"|"+q;
+  ui.duvCache = ui.duvCache || {};
+  if(ui.duvCache[key]){ ui.duv = {ex:en.id, q, resp:ui.duvCache[key]}; render(); return; }
+  if(!navigator.onLine){ ui.duv = {ex:en.id, q, err:"A IA precisa de internet. Sem sinal, veja as dicas na animação do exercício."}; render(); return; }
+  if(!fb.user){ ui.duv = {ex:en.id, q, err:"Entre na sua conta para usar a IA."}; render(); return; }
+  ui.duv = {ex:en.id, q, busy:true}; render();
+  try{
+    const st = draft(en, p.si), L = lastEntry(en.id), ls = L && L.sets.filter(x=>x.kg||x.reps)[0];
+    const t = await iaCall("duvidaExercicio", {pergunta:q,
+      exercicio:{id:en.id, nome:e.name, grupo:GROUPS[e.g], eq:e.eq, dicas:(EXA.CUES[en.id]||[]).map(c=>String(c).replace(/<[^>]+>/g,""))},
+      treino:{meta:entryReps(en).trim(), carga:toNum(st.kg)?st.kg+" kg":"", ultima:ls?`${ls.kg||"–"} kg × ${ls.reps||"–"}`:""},
+      perfil:iaBase().perfil});
+    ui.duvCache[key] = String(t.resposta||"");
+    if(ui.duv && ui.duv.q===q) ui.duv = {ex:en.id, q, resp:ui.duvCache[key]};
+  }catch(err){
+    const code = err && err.code ? (String(err.code).startsWith("functions/") ? err.code : "functions/"+err.code) : "";
+    if(ui.duv && ui.duv.q===q) ui.duv = {ex:en.id, q, err: IA_ERR[code] && err.message ? err.message : "Não deu para responder agora. Tente de novo."};
+  }
+  if(state.session && state.session.sheet==="duvida") render();
+}
+
+// ---------- Importar a ficha da academia por foto (função lerFicha) ----------
+let fichaIn = null;
+function fichaEscolher(){
+  if(!fichaIn){
+    fichaIn = document.createElement("input"); fichaIn.type = "file"; fichaIn.accept = "image/*"; fichaIn.multiple = true; fichaIn.hidden = true;
+    fichaIn.addEventListener("change", ()=>{ const f = Array.from(fichaIn.files||[]).slice(0,3); fichaIn.value = ""; if(f.length) fichaGo(f); });
+    document.body.appendChild(fichaIn);
+  }
+  fichaIn.click();
+}
+async function fotoJpeg(file){
+  const url = URL.createObjectURL(file);
+  try{
+    const img = await new Promise((res, rej)=>{ const im = new Image(); im.onload = ()=>res(im); im.onerror = rej; im.src = url; });
+    const k = Math.min(1, 1600/Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement("canvas"); c.width = Math.round(img.naturalWidth*k); c.height = Math.round(img.naturalHeight*k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    return {tipo:"image/jpeg", dados:c.toDataURL("image/jpeg", .82).split(",")[1]};
+  }finally{ URL.revokeObjectURL(url); }
+}
+function renderFicha(){
+  return `<div class="iaform fichawait">
+    ${ui.fichaBusy ? `<p>Lendo a sua ficha… Isso leva uns 20 segundos.</p>` : `<p class="lmsg" role="alert">${esc(ui.fichaMsg||"")}</p><button class="primary pbtn" data-act="fichaagain">${CAM_ICO} Tentar outra foto</button>`}
+    <p class="note">Dica: foto de frente, com boa luz e a ficha inteira aparecendo. Dá para mandar até 3 fotos de uma vez.</p>
+  </div>`;
+}
+async function fichaGo(files){
+  const fail = t=>{ ui.fichaBusy = false; ui.fichaMsg = t; render(); };
+  ui.planSub = {kind:"ficha"}; ui.fichaMsg = ""; window.scrollTo({top:0});
+  if(!navigator.onLine){ fail("A IA precisa de internet para ler a ficha."); return; }
+  if(!fb.user){ fail("Entre na sua conta para usar a IA."); return; }
+  ui.fichaBusy = true; render();
+  try{
+    const fotos = [];
+    for(const f of files){ try{ fotos.push(await fotoJpeg(f)); }catch(e){} }
+    if(!fotos.length){ fail("Não consegui abrir a foto. Tente tirar de novo."); return; }
+    const t = await iaCall("lerFicha", {...iaBase(), fotos});
+    const days = (t.dias||[]).slice(0,6).map((d,i)=>({name:`Treino ${LETTERS[i]}`, type:String(d.tipo||"Treino").slice(0,20), focus:String(d.foco||""),
+      items:(d.itens||[]).filter(it=>BY[it.id]).map(it=>({id:it.id, sets:+it.sets||3, reps:String(it.reps||"10–12"), rest:RESTS.includes(it.rest)?it.rest:"90s", mao:true}))})).filter(d=>d.items.length);
+    if(!days.length){ fail(t.resumo || "Não consegui ler a ficha. Tente uma foto mais nítida, de frente e com boa luz."); return; }
+    const fora = (t.fora||[]).filter(Boolean);
+    const antes = JSON.stringify(state.plan), diasAntes = state.cfg.days;
+    state.plan = {days, made:new Date().toISOString(), ficha:true};
+    if(days.length>=2 && days.length<=6) state.cfg.days = days.length;
+    state.planIA = {origem:"ficha", resumo:(String(t.resumo||"Ficha importada.").replace(/\.$/,"") + "." + (fora.length ? ` Não achei no app: ${fora.join(", ")}.` : "")).slice(0,400), antes, diasAntes, depois:JSON.stringify(state.plan), at:Date.now()};
+    if(state.hojePick && state.hojePick.day!=null) state.hojePick = null;
+    ui.fichaBusy = false; ui.planSub = {kind:"sug"}; state.day = 0;
+    save(); render(); window.scrollTo({top:0});
+  }catch(e){
+    const code = e && e.code ? (String(e.code).startsWith("functions/") ? e.code : "functions/"+e.code) : "";
+    fail(IA_ERR[code] && e.message ? e.message : "Não deu para ler a ficha agora. Confira a internet e tente de novo.");
+  }
+}
+
 let revBusy = false;
 async function revisaoSemanal(){
   if(revBusy || !FB_ON || !IA_PRONTA || !fb.user || !navigator.onLine || !state.plan || state.session || !dbRef) return;
@@ -2189,7 +2380,7 @@ function renderSet(s, p){
     <h2 class="pname">${esc(e.name)}</h2>
     <div class="pvis"><canvas class="anim" data-ex="${en.id}" aria-label="Demonstração: ${esc(e.name)}"></canvas></div>
     <div class="pmeta"><span>Meta ${esc(entryReps(en).trim())}</span>${L?`<span>Última ${esc(L.sets.filter(x=>x.kg||x.reps)[0]?.kg||"–")} kg × ${esc(L.sets.filter(x=>x.kg||x.reps)[0]?.reps||"–")}</span>`:""}${sg.up&&p.si===0?`<span class="up">${ICO.arrowUp} Carga nova</span>`:""}</div>
-    <div class="pact"><button class="metabtn" data-act="sheet" data-s="ficha">${ICO.swap} Exercício ${p.ei+1} de ${s.entries.length}</button>${usesBar(en.id)?`<button class="metabtn" data-act="sheet" data-s="plates">Anilhas</button>`:""}</div>
+    <div class="pact"><button class="metabtn" data-act="sheet" data-s="ficha">${ICO.swap} Exercício ${p.ei+1} de ${s.entries.length}</button>${usesBar(en.id)?`<button class="metabtn" data-act="sheet" data-s="plates">Anilhas</button>`:""}${FB_ON && IA_PRONTA?`<button class="metabtn" data-act="sheet" data-s="duvida">Dúvida</button>`:""}</div>
     <div class="stpcard">
       ${bw?"":`<div class="stp"><span class="stl">Carga</span>
         <label class="sval"><input class="bignum" id="pkg" inputmode="decimal" autocomplete="off" data-act="pval" data-f="kg" data-e="${p.ei}" data-s="${p.si}" value="${esc(st.kg)}" placeholder="0" aria-label="Carga em kg"><em>kg</em></label>
@@ -2198,7 +2389,8 @@ function renderSet(s, p){
         <label class="sval"><input class="bignum" id="prp" inputmode="numeric" autocomplete="off" data-act="pval" data-f="reps" data-e="${p.ei}" data-s="${p.si}" value="${esc(st.reps)}" placeholder="0" aria-label="Repetições"></label>
         <button class="sq" data-act="step" data-f="reps" data-d="-1" aria-label="Diminuir repetições">−</button><button class="sq" data-act="step" data-f="reps" data-d="1" aria-label="Aumentar repetições">+</button></div>
     </div>
-    <button class="primary pbtn" data-act="register">Registrar série</button>
+    <div class="regrow">${SR?`<button class="mic${ui.voz?" on":""}" data-act="voz" aria-label="${ui.voz?"Parar de ouvir":"Registrar a série falando"}" aria-pressed="${!!ui.voz}">${MIC_ICO}</button>`:""}<button class="primary pbtn" data-act="register">Registrar série</button></div>
+    <p class="vozlive" id="voztxt" role="status">${ui.voz ? esc(ui.voz.txt || "Ouvindo… diga a carga e as repetições") : esc(ui.vozOk ? "" : vozMsg())}</p>
     ${renderSheet(s, p)}
   </div>`;
 }
@@ -2211,6 +2403,7 @@ function renderRest(s, p){
   return `<div class="player prest">
     ${topBar(s, "", segsFor(en, p.si, fresh))}
     ${f?`<div class="prflash" role="status">${ICO.record}<div><b>Novo recorde</b><span>${esc(BY[f.id]?.name||"")} · ${setTxt(f)}</span></div></div>`:""}
+    ${vozMsg() && ui.vozOk ? `<p class="vozok" role="status">${ICO.check} ${esc(vozMsg())}</p>` : ""}
     <h2 class="rtitle">Descanso</h2>
     <div class="ring"><svg viewBox="0 0 200 200" aria-hidden="true"><circle class="rbg" cx="100" cy="100" r="88"/><circle id="ringP" class="rfg" cx="100" cy="100" r="88" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C*(1-left/tot)).toFixed(1)}"/></svg><div id="restT" class="rtime" role="timer">${mmss(left)}</div></div>
     <div class="rbtns"><button class="sec" data-act="rest15">+15 s</button><button class="sec" data-act="restskip">Pular</button></div>
@@ -2229,11 +2422,13 @@ function renderSheet(s, p){
     <button class="sheetbtn" data-act="sheet" data-s="busy">Aparelho ocupado</button>
     <button class="sheetbtn" data-act="sheet" data-s="swap">Não gostei, trocar</button>
     <button class="sheetbtn" data-act="addset" data-e="${p.ei}">Fazer mais uma série</button>
+    ${FB_ON && IA_PRONTA?`<button class="sheetbtn" data-act="sheet" data-s="duvida">Tirar dúvida sobre o exercício</button>`:""}
     <button class="sheetbtn" data-act="sheet" data-s="end">Encerrar treino</button>`;
   else if(s.sheet==="ficha") body = `<h3>Qual exercício agora?</h3><p class="note">Faça na ordem que quiser. O que ficar para trás continua na lista.</p><div class="fichalist">${s.entries.map((en,ei)=>{ const dn = en.sets.filter(x=>x.done).length, all = dn===en.sets.length, cur = ei===p.ei;
       return `<button class="sheetbtn frow${cur?" on":""}" data-act="jump" data-e="${ei}" ${all?"disabled":""}><canvas class="anim thumb" data-ex="${en.id}" data-off="${ei*300}" aria-hidden="true"></canvas><span class="mt"><b>${esc(BY[en.id].name)}</b><small>${all?"Feito":cur?`Agora · ${dn} de ${en.sets.length} séries`:dn?`${dn} de ${en.sets.length} séries`:`${en.sets.length} séries`}</small></span>${all?ICO.check:""}</button>`;}).join("")}</div>`;
   else if(s.sheet==="busy") body = `<h3>Trocar só hoje</h3>${renderAlts(s.entries[p.ei], s)}`;
   else if(s.sheet==="plates") body = renderPlateCalc(s.entries[p.ei], draft(s.entries[p.ei], p.si));
+  else if(s.sheet==="duvida") body = renderDuvida(s.entries[p.ei]);
   else if(s.sheet==="swap"){ const en = s.entries[p.ei];
     body = `<h3>Trocar ${esc(BY[en.id].name)}</h3><div class="alts"><p class="note">Exercícios parecidos para ${GROUPS[BY[en.id].g].toLowerCase()}. A troca fica no seu plano e este não volta a ser sugerido.</p>${simGrid(similar(en.id, s.entries.map(x=>x.id)), id=>`<button class="primary" data-act="swapex" data-e="${p.ei}" data-id="${id}">Trocar</button>`)}</div>`; }
   else if(s.sheet==="end") body = `<h3>Encerrar treino</h3>
@@ -2801,6 +2996,7 @@ view.addEventListener("click", e=>{
   const act = b.dataset.act, d = state.plan.days[state.day];
   if(!act && b.dataset.day!==undefined){ state.day = +b.dataset.day; render(); return; }
   const S = state.session;
+  if(rec && act!=="voz") vozParar();
   if(act==="cfgset"){ const k = b.dataset.k, v = k==="days" ? +b.dataset.v : b.dataset.v; ui.cfgDraft = {...cfgNow(), [k]:v}; ui.genAsk = false; const y = window.scrollY; render(); window.scrollTo(0, y); return; }
   if(act==="gengo"){ const c = ui.cfgDraft || (state.novo ? cfgNow() : null); if(!c) return;
     if(state.session && !ui.genAsk){ ui.genAsk = true; render(); return; }
@@ -2810,18 +3006,11 @@ view.addEventListener("click", e=>{
   if(act==="bkimport"){ ui.bkmsg = ""; $("#bkfile").value = ""; $("#bkfile").click(); return; }
   if(act==="bkconfirm"){ if(ui.bkpend) importData(ui.bkpend); return; }
   if(act==="bkcancel"){ ui.bkpend = null; ui.bkmsg = ""; render(); return; }
-  if(act==="register"){
-    const p = pos(S); if(!p) return;
-    const en = S.entries[p.ei], st = draft(en, p.si);
-    const before = priorSets(en.id), pr = before.length ? recordOf([...before, ...en.sets.filter(x=>x.done && worked(x))], st.kg, st.reps) : null;
-    if(pr){ st.pr = pr; S.flash = {id:en.id, kg:st.kg, reps:st.reps}; try{ navigator.vibrate && navigator.vibrate([60,50,160]); }catch(e){} } else { delete st.pr; S.flash = null; }
-    S.lastReg = {ei:p.ei, si:p.si, t:Date.now()};
-    st.done = true; delete st.t; S.sheet = null; S.confirmCancel = false;
-    if(en.sets.every(x=>x.done)) S.cur = null;
-    if(pos(S)){ const sec = restSec(en); S.phase = "rest"; S.restTotal = sec; S.restUntil = Date.now()+sec*1000; ensureTick(); }
-    else { S.phase = "done"; S.review = true; stopTimer(); }
-    save(); render(); return;
-  }
+  if(act==="register"){ registrarSerie(); return; }
+  if(act==="voz"){ vozAlternar(); return; }
+  if(act==="duvq"){ duvidaPerguntar(b.dataset.v); return; }
+  if(act==="fichapick"){ fichaEscolher(); return; }
+  if(act==="fichaagain"){ fichaEscolher(); return; }
   if(act==="step"){
     const p = pos(S); if(!p) return; const en = S.entries[p.ei], st = draft(en, p.si), dlt = +b.dataset.d;
     if(b.dataset.f==="kg") st.kg = fmtKg(Math.max(0, toNum(st.kg) + dlt*kgStep(en.id)));
@@ -2962,6 +3151,7 @@ view.addEventListener("change", e=>{
   else if(act==="reps"||act==="rest"){ d.items[+el.dataset.i][act] = el.value; d.items[+el.dataset.i].mao = true; save(); }
 });
 view.addEventListener("submit", e=>{
+  if(e.target.id==="duvform"){ e.preventDefault(); const q = ($("#duvtxt")?.value||"").trim(); if(q.length>=3) duvidaPerguntar(q); return; }
   if(e.target.id!=="plform") return;
   e.preventDefault();
   const v = $("#plurl").value.trim();
