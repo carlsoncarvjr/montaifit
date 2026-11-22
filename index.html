@@ -571,7 +571,8 @@ label.f,.row .grp,.exbtn small,.card .meta2{text-transform:none;letter-spacing:0
 .llogo{position:absolute;left:max(12px,env(safe-area-inset-left,0px));top:calc(14px + env(safe-area-inset-top,0px));width:150px;height:auto}
 .lhead{position:relative}
 .lhead h1{font-size:clamp(2.6rem,12.5vw,3.3rem);font-weight:800;letter-spacing:-.04em;line-height:.98;margin:0}
-.lhead h1 em{display:block;font-style:normal;color:var(--accent);font-size:.5em;letter-spacing:-.025em;line-height:1.08;margin-top:8px;max-width:15ch}
+.lhead h1 .hai{color:var(--accent)}
+.lhead h1 em{display:block;font-style:normal;color:var(--accent);font-size:.5em;letter-spacing:-.025em;line-height:1.08;margin-top:8px;max-width:22ch}
 .lhead p{margin:12px 0 0;font-size:1.02rem;line-height:1.4;color:var(--fg);opacity:.86;max-width:30ch}
 .lcta{display:flex;flex-direction:column;gap:10px;margin-top:20px}
 .who-btns .lmailbtn{justify-content:center;height:52px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);font-size:1rem;font-weight:600}
@@ -2993,7 +2994,7 @@ function showLogin(){
   if($("#lform")) return;
   $("#whoBtns").innerHTML = `<div class="lhero"><img class="lcover" src="img/capa.jpg" alt="" aria-hidden="true">
       <img class="llogo" src="img/marca/logo-montai-fit.svg" alt="MontAI Fit" width="190" height="64">
-      <div class="lhead"><h1>Monta aí.<em>Seu plano sai pronto em seis toques.</em></h1><p>Depois é só treinar: a carga já vem preenchida e cada série se registra com um toque.</p></div></div>
+      <div class="lhead"><h1 aria-label="Mont aí. Seu plano de treino pronto em seis toques.">Mont<span class="hai">AÍ</span>.<em>Seu plano de treino pronto em seis toques.</em></h1><p>Depois é só treinar: a carga já vem preenchida e cada série se registra com um toque.</p></div></div>
     <div class="lcta">
       <button type="button" class="gbtn" data-act="lgoogle">${G_ICON}Continuar com Google</button>
       <button type="button" class="lmailbtn" data-act="lmail">Entrar com e-mail e senha</button>
