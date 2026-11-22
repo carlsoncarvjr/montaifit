@@ -332,6 +332,16 @@ button.sec{background:var(--surface-2);border:none;color:var(--fg);font-weight:6
 .nrow span{color:var(--muted)}
 .pdone{justify-content:space-between}
 .donebox{display:flex;flex-direction:column;gap:10px;padding-top:12vh}
+.aval{display:flex;flex-direction:column;gap:10px;margin-top:10px;background:var(--surface);border-radius:18px;padding:14px 16px}
+.aval h3{margin:0;font-size:1rem}
+.stars{display:flex;gap:6px}
+.star{background:none;border:none;padding:4px;color:var(--surface-2);min-width:44px;min-height:44px;display:grid;place-items:center}
+.star svg{width:32px;height:32px;fill:currentColor}
+.star.on{color:var(--accent)}
+.aval .chips{animation:trfade .26s cubic-bezier(.2,.8,.2,1) both}
+.aval .chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.aval input{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;color:var(--fg);font:inherit}
+.hstars{color:var(--accent);letter-spacing:1px}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px}
 .stats div{background:var(--surface);border-radius:14px;padding:14px;display:flex;flex-direction:column}
 .stats b{font-size:1.6rem;font-weight:800}
@@ -2194,6 +2204,24 @@ async function fichaGo(files){
   }
 }
 
+// ---------- Avaliação do treino: estrelas e feedback opcional no fim ----------
+const STAR = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.1l-5.7 3.2 1.2-6.4L2.8 9.5l6.4-.8z"/></svg>`;
+const AV_BOM = ["Na medida", "Gostei dos exercícios", "Senti progresso", "Rápido e direto"];
+const AV_RUIM = ["Pesado demais", "Leve demais", "Longo demais", "Não gostei de algum exercício", "Senti dor", "App atrapalhou"];
+function renderAval(s){
+  const a = s.aval || {}, n = a.nota || 0, tags = n ? (n>=4 ? AV_BOM : AV_RUIM) : [];
+  return `<div class="aval">
+    <h3>Como foi o treino?</h3>
+    <div class="stars" role="radiogroup" aria-label="Nota do treino">${[1,2,3,4,5].map(i=>`<button class="star${i<=n?" on":""}" data-act="avstar" data-n="${i}" role="radio" aria-checked="${i===n}" aria-label="${i} estrela${i>1?"s":""}">${STAR}</button>`).join("")}</div>
+    ${n ? `<div class="chips">${tags.map(t=>`<button class="chip" data-act="avtag" data-v="${esc(t)}" aria-pressed="${(a.tags||[]).includes(t)}">${esc(t)}</button>`).join("")}</div>
+      <input data-act="avtxt" maxlength="500" autocomplete="off" placeholder="Quer contar mais? (opcional)" aria-label="Comentário sobre o treino" value="${esc(a.texto||"")}">` : `<p class="note" style="margin:0">Opcional. Ajuda o app a acertar os próximos treinos.</p>`}
+  </div>`;
+}
+function enviarAvaliacao(aval, treino){
+  if(!FB_ON || !fb.user || !navigator.onLine) return;
+  iaCall("avaliarTreino", {...aval, treino}).catch(()=>{});
+}
+
 let revBusy = false;
 async function revisaoSemanal(){
   if(revBusy || !FB_ON || !IA_PRONTA || !fb.user || !navigator.onLine || !state.plan || state.session || !dbRef) return;
@@ -2207,7 +2235,7 @@ async function revisaoSemanal(){
   revBusy = true;
   try{
     const desde = new Date(ini); desde.setDate(desde.getDate()-21);
-    const historico = state.history.filter(h=>new Date(h.date)>=desde).map(h=>({data:h.date, tipo:h.dayType||h.dayName||"", itens:(h.entries||[]).map(en=>({id:en.id, series:(en.sets||[]).map(x=>({kg:x.kg, reps:x.reps}))}))}));
+    const historico = state.history.filter(h=>new Date(h.date)>=desde).map(h=>({data:h.date, tipo:h.dayType||h.dayName||"", itens:(h.entries||[]).map(en=>({id:en.id, series:(en.sets||[]).map(x=>({kg:x.kg, reps:x.reps}))})), ...(h.aval?{nota:h.aval.nota, tags:h.aval.tags||[]}:{})}));
     const antesObj = JSON.stringify(state.plan);
     const t = await iaCall("revisarSemana", {...iaBase(), equip:state.cfg.equip, plano: iaPlano(), historico});
     if(state.session || JSON.stringify(state.plan)!==antesObj) return;            // a pessoa mexeu no plano enquanto isso: tenta na próxima vez
@@ -2568,6 +2596,7 @@ function renderDone(s, d){
     <div class="donebox"><div class="eyebrow">Treino concluído</div><h2 class="pname">${esc(s.custom?d.name:d.type)}</h2>
       <div class="stats"><div><b>${exN}</b><span>exercícios</span></div><div><b>${doneSets.length}</b><span>séries</span></div><div><b>${Math.round(vol).toLocaleString("pt-BR")}</b><span>kg levantados</span></div></div>
       ${recs.length?`<div class="prlist"><h3>${recs.length>1?`${recs.length} recordes`:"Novo recorde"}</h3>${recs.map(r=>`<div><span>${esc(BY[r.id]?.name||r.id)}</span><span>${setTxt(r)}</span></div>`).join("")}</div>`:""}
+      ${renderAval(s)}
       ${swaps.length?`<p class="eyebrow" style="margin:6px 0 0">Qual exercício fica no seu plano?</p>${swaps.map(({en,ei})=>`<div class="swaprow">${opt(ei,"plan",en.from,"Estava no plano",en.keep!=="new")}${opt(ei,"new",en.id,"Você fez hoje",en.keep==="new")}</div>`).join("")}`:""}
     </div>
     <div class="donebtns"><button class="primary pbtn" data-act="finish">Salvar no histórico</button>
@@ -2707,7 +2736,7 @@ function renderHistory(){
   return `<div class="hist2">${renderWeekCard()}${h.map(({x,i})=>{ const open = ui.hopen===i, rc = recs[i]||[], rid = new Set(rc.map(r=>r.id));
     const vol = x.entries.reduce((a,e)=>a+e.sets.reduce((b,st)=>b+toNum(st.kg)*toNum(st.reps),0),0);
     return `<div class="hcard${open?" open":""}">
-      <button class="hhead" data-act="hopen" data-i="${i}" aria-expanded="${open}"><span class="mt"><b>${dShort(x.date)}</b><small>${esc(x.dayName)}${x.dayType&&x.dayType!=="Personal"?" · "+esc(x.dayType):""}${rc.length?` · <span class="prtag">${rc.length} recorde${rc.length>1?"s":""}</span>`:""}</small></span><span class="chev" aria-hidden="true">${open?ICO.up:ICO.right}</span></button>
+      <button class="hhead" data-act="hopen" data-i="${i}" aria-expanded="${open}"><span class="mt"><b>${dShort(x.date)}${x.aval&&x.aval.nota?` <span class="hstars" aria-label="${x.aval.nota} de 5 estrelas">${"★".repeat(x.aval.nota)}</span>`:""}</b><small>${esc(x.dayName)}${x.dayType&&x.dayType!=="Personal"?" · "+esc(x.dayType):""}${rc.length?` · <span class="prtag">${rc.length} recorde${rc.length>1?"s":""}</span>`:""}</small></span><span class="chev" aria-hidden="true">${open?ICO.up:ICO.right}</span></button>
       ${open?`<div class="hbody">${x.entries.filter(e=>e.sets.length).map(e=>`<div class="hex"><canvas class="anim thumb" data-ex="${e.id}" aria-hidden="true"></canvas><span class="mt"><b>${esc(BY[e.id]?.name||e.id)}</b><small>${esc(groupSets(e.sets))}</small>${rid.has(e.id)?`<span class="prtag">${ICO.record} Recorde</span>`:""}</span></div>`).join("")}
         <div class="hfoot"><span class="note">${Math.round(vol).toLocaleString("pt-BR")} kg levantados${x.dur?` · ${x.dur} min`:""}</span><span class="hfbtns"><button class="linkbtn" data-act="share" data-i="${i}">${ICO.share} Compartilhar</button><button class="linkbtn danger" data-act="delhist" data-i="${i}">${state.confirmDel===i?"Confirmar exclusão":"Excluir"}</button></span></div></div>`:""}
     </div>`;}).join("")}</div>${renderShare()}`;
@@ -3086,8 +3115,10 @@ function finishSession(){
   }
   const entries = s.entries.map(en=>({id:en.id, sets:en.sets.filter(x=>x.done).map(({kg,reps})=>({kg,reps}))}));
   const dur = s.started ? Math.round((Date.now()-new Date(s.started))/60000) : 0;
+  const aval = s.aval && s.aval.nota ? {nota:s.aval.nota, tags:(s.aval.tags||[]).slice(0,6), ...(String(s.aval.texto||"").trim() ? {texto:String(s.aval.texto).trim().slice(0,500)} : {})} : null;
   state.history.push({date:new Date().toISOString(), dayName:day.name, dayType:(s.custom ? (s.mineId ? "Meu treino" : "Personal") : day.type), entries,
-    ...(dur>0 && dur<=300 ? {dur} : {}), ...(s.sugId?{sugId:s.sugId}:{})});
+    ...(dur>0 && dur<=300 ? {dur} : {}), ...(s.sugId?{sugId:s.sugId}:{}), ...(aval?{aval}:{})});
+  if(aval) enviarAvaliacao(aval, {tipo:String(s.custom ? day.name : day.type||""), exercicios:entries.filter(e=>e.sets.length).length, series:entries.reduce((a,e)=>a+e.sets.length,0), dur:dur>0&&dur<=300?dur:0});
   state.novo = false;
   if(state.planIA) state.planIA.visto = true;
   state.session = null; ui.min = false; state.view = "historico"; ui.hopen = state.history.length-1; stopTimer(); save(true); render(); window.scrollTo({top:0});
@@ -3127,6 +3158,8 @@ view.addEventListener("click", e=>{
   if(act==="bkconfirm"){ if(ui.bkpend) importData(ui.bkpend); return; }
   if(act==="bkcancel"){ ui.bkpend = null; ui.bkmsg = ""; render(); return; }
   if(act==="register"){ registrarSerie(); return; }
+  if(act==="avstar" && S){ const n = +b.dataset.n; S.aval = S.aval||{}; if(S.aval.nota!==n) S.aval.tags = []; S.aval.nota = n; save(); render(); return; }
+  if(act==="avtag" && S && S.aval){ const t = b.dataset.v, a = S.aval.tags = S.aval.tags||[], k = a.indexOf(t); if(k>=0) a.splice(k,1); else a.push(t); b.setAttribute("aria-pressed", k<0); save(); return; }
   if(act==="voz"){ vozAlternar(); return; }
   if(act==="duvq"){ duvidaPerguntar(b.dataset.v); return; }
   if(act==="fichapick"){ fichaEscolher(); return; }
@@ -3283,6 +3316,7 @@ view.addEventListener("input", e=>{
   if(act==="mname"){ if(ui.draft) ui.draft.name = el.value; return; }
   if(act==="iatext"){ ui.iaText = el.value; return; }
   if(act==="iaplanotext"){ ui.iaPlanoText = el.value; return; }
+  if(act==="avtxt" && state.session){ (state.session.aval = state.session.aval||{}).texto = el.value; save(); return; }
   if(act==="mreps"){ if(ui.draft) ui.draft.items[+el.dataset.i].reps = el.value; return; }
   if(act==="catq"){ ui.cat.q = el.value; $("#catgrid").innerHTML = catGrid(); EXA.mount($("#catgrid")); return; }
   if(act==="pval"){ const st = state.session.entries[+el.dataset.e].sets[+el.dataset.s]; st[el.dataset.f] = el.value.replace(/[^0-9.,]/g,""); st.t = true; save(); return; }
