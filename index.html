@@ -342,6 +342,7 @@ button.sec{background:var(--surface-2);border:none;color:var(--fg);font-weight:6
 .aval .chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 .aval input{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;color:var(--fg);font:inherit}
 .hstars{color:var(--accent);letter-spacing:1px}
+.fixbtn{align-self:center;margin:-4px 0 8px;font-size:.9rem}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px}
 .stats div{background:var(--surface);border-radius:14px;padding:14px;display:flex;flex-direction:column}
 .stats b{font-size:1.6rem;font-weight:800}
@@ -1970,8 +1971,11 @@ const CAM_ICO = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-2
 const NUM_PT = {zero:0,um:1,uma:1,dois:2,duas:2,tres:3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10,onze:11,doze:12,treze:13,catorze:14,quatorze:14,quinze:15,
   dezesseis:16,dezasseis:16,dezessete:17,dezoito:18,dezenove:19,vinte:20,trinta:30,quarenta:40,cinquenta:50,sessenta:60,setenta:70,oitenta:80,noventa:90,cem:100,cento:100,duzentos:200,trezentos:300};
 // Lê a fala ("sessenta quilos, dez", "60 kg 10 repetições", "fiz doze", "22 e meio por 8") e devolve {kg, reps}.
-function lerFala(txt, semCarga){
-  const w = norm(txt).replace(/(\d),(\d)/g,"$1.$2").replace(/(\d)(kg|x)\b/g,"$1 $2").split(/[^a-z0-9.]+/).filter(Boolean);
+function lerFala(txt, semCarga, ctx){
+  ctx = ctx || {};
+  // erros comuns da transcrição: "e meio" vira "e-mails", "e meia", "i meio"
+  const t0 = norm(txt).replace(/\b(e|i)[- ]?(mails?|meia|meio)\b/g, " e meio ").replace(/(\d)\s*,\s*5\b/g, "$1.5");
+  const w = t0.replace(/(\d),(\d)/g,"$1.$2").replace(/(\d)(kg|x)\b/g,"$1 $2").split(/[^a-z0-9.]+/).filter(Boolean);
   const isN = x=>/^\d+(\.\d+)?$/.test(x) || x in NUM_PT, val = x=>/^\d/.test(x) ? parseFloat(x) : NUM_PT[x];
   const nums = []; let i = 0;
   while(i<w.length){
@@ -1986,7 +1990,7 @@ function lerFala(txt, semCarga){
     }
     let u = "";
     if(/^(kg|kgs|quilo|quilos|kilo|kilos|quilograma|quilogramas)$/.test(w[i]||"")){ u = "kg"; i++; }
-    else if(/^(rep|reps|repeticao|repeticoes|vez|vezes)$/.test(w[i]||"")){ u = "reps"; i++; }
+    else if(/^(rep|reps|repeticao|repeticoes|vez|vezes|serie|series)$/.test(w[i]||"")){ u = "reps"; i++; }
     else if(antes==="com") u = "kg";
     else if(antes==="fiz") u = "reps";
     nums.push({v, u});
@@ -1994,15 +1998,27 @@ function lerFala(txt, semCarga){
   let kg = nums.find(n=>n.u==="kg")?.v, reps = nums.find(n=>n.u==="reps")?.v;
   const livres = nums.filter(n=>!n.u).map(n=>n.v);
   if(kg==null && reps==null){
-    if(livres.length>=2 && !semCarga){ kg = livres[0]; reps = livres[1]; }
+    if(livres.length>=2 && !semCarga){ [kg, reps] = qualECarga(livres[0], livres[1], ctx); }
     else if(livres.length>=2 && semCarga){ reps = livres[0]; }
-    else if(livres.length===1){ if(livres[0]<=40 || semCarga) reps = livres[0]; else kg = livres[0]; }
+    else if(livres.length===1){ const v = livres[0]; if(semCarga || (Number.isInteger(v) && (v<=40 && !(ctx.kg && Math.abs(v-ctx.kg)<=ctx.kg*.15 && !(v>=ctx.lo && v<=ctx.hi))))) reps = v; else kg = v; }
   }
   else if(reps==null && livres.length) reps = livres[0];
   else if(kg==null && livres.length && !semCarga) kg = livres[0];
   if(reps!=null && !(reps>=1 && reps<=100 && Number.isInteger(reps))) reps = null;
   if(kg!=null && !(kg>=0 && kg<=500)) kg = null;
   return kg==null && reps==null ? null : {kg, reps};
+}
+// Dois números sem unidade: decide qual é a carga e qual são as repetições pelo que faz sentido para este exercício.
+function qualECarga(a, b, ctx){
+  const custo = (kg, reps)=>{
+    if(!Number.isInteger(reps) || reps<1 || reps>60) return 1e9;            // repetição não tem "e meio"
+    let c = 0;
+    if(ctx.lo && ctx.hi) c += reps<ctx.lo ? (ctx.lo-reps) : reps>ctx.hi ? (reps-ctx.hi) : 0;
+    if(ctx.kg) c += Math.abs(kg-ctx.kg)/Math.max(2.5, ctx.kg*.1);
+    return c;
+  };
+  const ab = custo(a, b), ba = custo(b, a) + .5;                             // na dúvida, o jeito mais comum: carga primeiro
+  return ab<=ba ? [a, b] : [b, a];
 }
 let rec = null, grav = null;
 // No app instalado na tela de início do iPhone o reconhecimento do navegador não funciona: aí o app grava e o servidor transcreve.
@@ -2095,13 +2111,15 @@ async function gravarEnviar(g){
 function vozAplicar(falas){
   const S = state.session, p = S && pos(S); if(!p || S.phase==="rest"){ render(); return; }
   const en = S.entries[p.ei], st = draft(en, p.si), semCarga = BY[en.id].eq==="c" && !toNum(st.kg);
-  let r = null; for(const f of falas){ r = lerFala(f, semCarga); if(r && r.reps!=null) break; }
+  const L = lastEntry(en.id), ls = L && L.sets.filter(x=>x.kg||x.reps)[0], meta = range(entryReps(en));
+  const ctx = {kg: toNum(st.kg) || (ls ? toNum(ls.kg) : 0), lo: meta.lo, hi: meta.hi || meta.lo};
+  let r = null; for(const f of falas){ r = lerFala(f, semCarga, ctx); if(r && r.reps!=null) break; }
   if(!r){ ui.vozOk = false; ui.vozMsg = {t:Date.now(), txt:`Não entendi “${falas[0]||""}”. Diga, por exemplo: “sessenta quilos, dez”.`}; render(); return; }
   if(r.kg!=null) st.kg = fmtKg(r.kg);
   if(r.reps!=null) st.reps = String(r.reps);
   st.t = true;
   if(r.reps==null){ ui.vozOk = false; ui.vozMsg = {t:Date.now(), txt:`Anotei ${fmtKg(r.kg)} kg. Agora diga as repetições ou toque em Registrar.`}; save(); render(); return; }
-  ui.vozOk = true; ui.vozMsg = {t:Date.now(), txt:`Registrado por voz: ${st.kg && toNum(st.kg) ? st.kg+" kg × " : ""}${st.reps}`};
+  ui.vozOk = true; ui.vozMsg = {t:Date.now(), txt:`Registrado por voz: ${st.kg && toNum(st.kg) ? st.kg+" kg × " : ""}${st.reps}`, ouvi:falas[0]||""};
   registrarSerie();
 }
 function registrarSerie(){
@@ -2115,6 +2133,29 @@ function registrarSerie(){
   if(pos(S)){ const sec = restSec(en); S.phase = "rest"; S.restTotal = sec; S.restUntil = Date.now()+sec*1000; ensureTick(); }
   else { S.phase = "done"; S.review = true; stopTimer(); }
   save(); render();
+}
+
+// ---------- Corrigir a série anterior (voz que entendeu errado ou toque errado) ----------
+function renderCorrigir(s){
+  const L = s.lastReg, en = s.entries[L.ei], st = en && en.sets[L.si]; if(!st) return "";
+  const bw = BY[en.id].eq==="c" && !toNum(st.kg);
+  return `<h3>Corrigir: ${esc(BY[en.id].name)}, série ${L.si+1}</h3>
+    ${ui.vozMsg && ui.vozMsg.ouvi && Date.now()-ui.vozMsg.t < 120000 ? `<p class="note">O app ouviu: “${esc(ui.vozMsg.ouvi)}”</p>` : ""}
+    <div class="stpcard">
+      ${bw?"":`<div class="stp"><span class="stl">Carga</span>
+        <label class="sval"><input class="bignum" inputmode="decimal" autocomplete="off" data-act="cval" data-f="kg" value="${esc(st.kg)}" placeholder="0" aria-label="Carga em kg"><em>kg</em></label>
+        <button class="sq" data-act="cstep" data-f="kg" data-d="-1" aria-label="Diminuir carga">−</button><button class="sq" data-act="cstep" data-f="kg" data-d="1" aria-label="Aumentar carga">+</button></div>`}
+      <div class="stp"><span class="stl">Repetições</span>
+        <label class="sval"><input class="bignum" inputmode="numeric" autocomplete="off" data-act="cval" data-f="reps" value="${esc(st.reps)}" placeholder="0" aria-label="Repetições"></label>
+        <button class="sq" data-act="cstep" data-f="reps" data-d="-1" aria-label="Diminuir repetições">−</button><button class="sq" data-act="cstep" data-f="reps" data-d="1" aria-label="Aumentar repetições">+</button></div>
+    </div>
+    <button class="primary pbtn" data-act="cpronto">Pronto</button>`;
+}
+function corrigirRecorde(S){
+  const L = S.lastReg, en = S.entries[L.ei], st = en.sets[L.si];
+  const outras = en.sets.filter((x,k)=>k!==L.si && x.done && worked(x)), pr = recordOf([...priorSets(en.id), ...outras], st.kg, st.reps);
+  if(pr && priorSets(en.id).length) st.pr = pr; else delete st.pr;
+  if(S.flash && S.flash.id===en.id) S.flash = st.pr ? {id:en.id, kg:st.kg, reps:st.reps} : null;
 }
 
 // ---------- Tirar dúvida sobre o exercício (função duvidaExercicio): perguntas prontas, um toque ----------
@@ -2552,6 +2593,7 @@ function renderRest(s, p){
     ${topBar(s, "", segsFor(en, p.si, fresh))}
     ${f?`<div class="prflash" role="status">${ICO.record}<div><b>Novo recorde</b><span>${esc(BY[f.id]?.name||"")} · ${setTxt(f)}</span></div></div>`:""}
     ${vozMsg() && ui.vozOk ? `<p class="vozok" role="status">${ICO.check} ${esc(vozMsg())}</p>` : ""}
+    ${s.lastReg && s.entries[s.lastReg.ei] && s.entries[s.lastReg.ei].sets[s.lastReg.si] ? `<button class="linkbtn fixbtn" data-act="sheet" data-s="corrigir">Corrigir a série anterior</button>` : ""}
     <h2 class="rtitle">Descanso</h2>
     <div class="ring"><svg viewBox="0 0 200 200" aria-hidden="true"><circle class="rbg" cx="100" cy="100" r="88"/><circle id="ringP" class="rfg" cx="100" cy="100" r="88" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C*(1-left/tot)).toFixed(1)}"/></svg><div id="restT" class="rtime" role="timer">${mmss(left)}</div></div>
     <div class="rbtns"><button class="sec" data-act="rest15">+15 s</button><button class="sec" data-act="restskip">Pular</button></div>
@@ -2570,6 +2612,7 @@ function renderSheet(s, p){
     <button class="sheetbtn" data-act="sheet" data-s="busy">Aparelho ocupado</button>
     <button class="sheetbtn" data-act="sheet" data-s="swap">Não gostei, trocar</button>
     <button class="sheetbtn" data-act="addset" data-e="${p.ei}">Fazer mais uma série</button>
+    ${s.lastReg && s.entries[s.lastReg.ei] && s.entries[s.lastReg.ei].sets[s.lastReg.si] ? `<button class="sheetbtn" data-act="sheet" data-s="corrigir">Corrigir a série anterior</button>` : ""}
     ${FB_ON && IA_PRONTA?`<button class="sheetbtn" data-act="sheet" data-s="duvida">Tirar dúvida sobre o exercício</button>`:""}
     <button class="sheetbtn" data-act="sheet" data-s="end">Encerrar treino</button>`;
   else if(s.sheet==="ficha") body = `<h3>Qual exercício agora?</h3><p class="note">Faça na ordem que quiser. O que ficar para trás continua na lista.</p><div class="fichalist">${s.entries.map((en,ei)=>{ const dn = en.sets.filter(x=>x.done).length, all = dn===en.sets.length, cur = ei===p.ei;
@@ -2577,6 +2620,7 @@ function renderSheet(s, p){
   else if(s.sheet==="busy") body = `<h3>Trocar só hoje</h3>${renderAlts(s.entries[p.ei], s)}`;
   else if(s.sheet==="plates") body = renderPlateCalc(s.entries[p.ei], draft(s.entries[p.ei], p.si));
   else if(s.sheet==="duvida") body = renderDuvida(s.entries[p.ei]);
+  else if(s.sheet==="corrigir") body = renderCorrigir(s);
   else if(s.sheet==="swap"){ const en = s.entries[p.ei];
     body = `<h3>Trocar ${esc(BY[en.id].name)}</h3><div class="alts"><p class="note">Exercícios parecidos para ${GROUPS[BY[en.id].g].toLowerCase()}. A troca fica no seu plano e este não volta a ser sugerido.</p>${simGrid(similar(en.id, s.entries.map(x=>x.id)), id=>`<button class="primary" data-act="swapex" data-e="${p.ei}" data-id="${id}">Trocar</button>`)}</div>`; }
   else if(s.sheet==="end") body = `<h3>Encerrar treino</h3>
@@ -3158,6 +3202,10 @@ view.addEventListener("click", e=>{
   if(act==="bkconfirm"){ if(ui.bkpend) importData(ui.bkpend); return; }
   if(act==="bkcancel"){ ui.bkpend = null; ui.bkmsg = ""; render(); return; }
   if(act==="register"){ registrarSerie(); return; }
+  if(act==="cstep" && S && S.lastReg){ const en = S.entries[S.lastReg.ei], st = en.sets[S.lastReg.si], d = +b.dataset.d;
+    if(b.dataset.f==="kg") st.kg = fmtKg(Math.max(0, toNum(st.kg) + d*kgStep(en.id))); else st.reps = String(Math.max(0, (parseInt(st.reps)||0) + d));
+    corrigirRecorde(S); save(); render(); return; }
+  if(act==="cpronto" && S){ S.sheet = null; if(ui.vozMsg) ui.vozMsg = null; save(); render(); return; }
   if(act==="avstar" && S){ const n = +b.dataset.n; S.aval = S.aval||{}; if(S.aval.nota!==n) S.aval.tags = []; S.aval.nota = n; save(); render(); return; }
   if(act==="avtag" && S && S.aval){ const t = b.dataset.v, a = S.aval.tags = S.aval.tags||[], k = a.indexOf(t); if(k>=0) a.splice(k,1); else a.push(t); b.setAttribute("aria-pressed", k<0); save(); return; }
   if(act==="voz"){ vozAlternar(); return; }
@@ -3316,6 +3364,8 @@ view.addEventListener("input", e=>{
   if(act==="mname"){ if(ui.draft) ui.draft.name = el.value; return; }
   if(act==="iatext"){ ui.iaText = el.value; return; }
   if(act==="iaplanotext"){ ui.iaPlanoText = el.value; return; }
+  if(act==="cval" && state.session && state.session.lastReg){ const S2 = state.session, st = S2.entries[S2.lastReg.ei].sets[S2.lastReg.si];
+    st[el.dataset.f] = el.value.replace(/[^0-9.,]/g,""); corrigirRecorde(S2); save(); return; }
   if(act==="avtxt" && state.session){ (state.session.aval = state.session.aval||{}).texto = el.value; save(); return; }
   if(act==="mreps"){ if(ui.draft) ui.draft.items[+el.dataset.i].reps = el.value; return; }
   if(act==="catq"){ ui.cat.q = el.value; $("#catgrid").innerHTML = catGrid(); EXA.mount($("#catgrid")); return; }
