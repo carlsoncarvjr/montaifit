@@ -430,6 +430,15 @@ header.top{flex-wrap:nowrap}
 .ianota b{display:block;font-size:.85rem;margin-bottom:4px}
 .ianota p{margin:0;color:var(--muted);font-size:.92rem;line-height:1.45}
 .goalnote{margin:0 0 12px;max-width:60ch}
+.iaplanbtn{margin:0 0 12px}
+.iaajuste{display:flex;gap:8px;align-items:flex-start;margin:10px 0 0;color:var(--muted);font-size:.86rem;line-height:1.4}
+.iaajuste svg{flex:none;width:16px;height:16px;margin-top:2px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+.iaajuste .linkbtn{font-size:.86rem;padding:0;margin-left:4px;min-height:0}
+.iaplanote{background:var(--surface);border-radius:16px;padding:14px 16px;margin-bottom:12px}
+.iaplanote b{display:flex;gap:8px;align-items:center;font-size:.92rem}
+.iaplanote b svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+.iaplanote p{margin:6px 0 0;color:var(--muted);font-size:.9rem;line-height:1.45}
+.iaplanote .linkbtn{margin-top:6px;padding:0;min-height:0}
 .catitem .tick{position:absolute;top:12px;right:12px;width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:none;place-items:center;font-weight:800}
 .catitem.on{border-color:var(--accent)}
 .catitem.on .tick{display:grid}
@@ -1570,7 +1579,7 @@ syncEl.hidden = true;
 
 // ---------- Salvamento: aparelho na hora, conta logo em seguida (uma escrita por vez) ----------
 let lsOk = true, writing = false, again = false;
-function snapshot(){ const {cfg,plan,history,session,savedAt,playlist,mine,hojePick,perfil,novo} = state; return {cfg,plan,history,session,savedAt,playlist,mine,hojePick,perfil,novo}; }
+function snapshot(){ const {cfg,plan,history,session,savedAt,playlist,mine,hojePick,perfil,novo,planIA,revSemana} = state; return {cfg,plan,history,session,savedAt,playlist,mine,hojePick,perfil,novo,planIA,revSemana}; }
 const ui = {list:false, nota:false, pledit:false, min:false, planSub:null, draft:null, editIdx:null, cat:null, hopen:null};
 const hhmm = ()=>new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
 function save(now){
@@ -1612,6 +1621,7 @@ function load(obj){
   state.mine = Array.isArray(obj.mine) ? obj.mine : []; state.hojePick = obj.hojePick || null;
   state.perfil = obj.perfil && typeof obj.perfil==="object" ? obj.perfil : {};
   state.novo = !!obj.novo;
+  state.planIA = obj.planIA && typeof obj.planIA==="object" ? obj.planIA : null; state.revSemana = obj.revSemana || "";
   return true;
 }
 
@@ -1683,7 +1693,7 @@ function render(){
   $("#cfgSum").textContent = [opt("goal"), `${state.cfg.days} dias`, opt("time"), state.cfg.enf!=="none"?`ênfase: ${opt("enf")}`:""].filter(Boolean).join(" · ");
   document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected", t.dataset.view===state.view));
   const inSession = !!state.session && state.view==="treinar" && !ui.min;
-  const sub = state.view==="plano" && ui.planSub ? (ui.planSub.kind==="sug" ? "Treino sugerido" : ui.planSub.kind==="ia" ? "Montar com IA" : "Montar treino") : null;
+  const sub = state.view==="plano" && ui.planSub ? (ui.planSub.kind==="sug" ? "Treino sugerido" : ui.planSub.kind==="ia" ? "Montar com IA" : ui.planSub.kind==="iaplano" ? "Ajustar plano" : "Montar treino") : null;
   $("#ptitle").textContent = sub || {plano:"Plano", objetivo:"Objetivo", historico:"Histórico"}[state.view] || "Treino";
   paintHeader(state.view==="treinar" && !sub);
   $("#smoke").hidden = false; $("#smoke").classList.toggle("soft", state.view!=="treinar");
@@ -1714,6 +1724,7 @@ function renderPlan(){
   if(!ui.planSub) return renderPlanHome();
   if(ui.planSub.kind==="sug") return renderPlanSug();
   if(ui.planSub.kind==="ia") return renderIA();
+  if(ui.planSub.kind==="iaplano") return renderIAPlano();
   return renderMine() + (ui.cat ? renderCatalog() : "");
 }
 function renderPlanHome(){
@@ -1723,6 +1734,7 @@ function renderPlanHome(){
     <button class="sugcard2" data-act="opensug"><img src="img/capa.jpg" alt="" aria-hidden="true">
       <span class="sgtxt"><small>Treino sugerido</small><b>Plano de ${n} dias</b><small class="sggoal">${esc($("#cfgSum").textContent)}</small></span><span class="chev" aria-hidden="true">${ICO.right}</span></button>
     <button class="linkbtn goallink" data-act="gogoal">Mudar objetivo, dias ou foco</button>
+    ${FB_ON && IA_PRONTA?`<button class="sec pbtn iabtn iaplanbtn" data-act="openiaplano">${IA_ICO} Ajustar plano com IA</button>`:""}
     <h2 class="sech">Meus treinos</h2>
     ${state.mine.length ? `<div class="mylist">${state.mine.map(m=>`<button class="myrow" data-act="openmine" data-id="${m.id}">${DUMB}<span class="mt"><b>${esc(m.name)}</b><small>${m.items.length} exercícios${m.id===pickId?" · treino de hoje":""}</small></span><span class="chev" aria-hidden="true">${ICO.right}</span></button>`).join("")}</div>`
       : `<p class="note">Nenhum treino montado ainda.</p>`}
@@ -1790,6 +1802,111 @@ async function iaGo(){
     const code = e && e.code ? (String(e.code).startsWith("functions/") ? e.code : "functions/"+e.code) : "";
     fail(IA_ERR[code] && e.message ? e.message : "Não deu para montar agora. Confira a internet e tente de novo.");
   }
+}
+async function iaCall(nome, dados){
+  if(!fb.fn){ await loadScript(FB_SDK+"functions-compat.js"); fb.fn = firebase.app().functions("southamerica-east1"); }
+  const res = await fb.fn.httpsCallable(nome, {timeout:70000})(dados);
+  return res && res.data || {};
+}
+const iaBase = ()=>{ const c = state.cfg; return {
+  catalogo: EX.map(e=>({id:e.id, nome:e.name, grupo:e.g, eq:e.eq})),
+  perfil: {objetivo:IA_GOAL[c.goal]||"", nivel:IA_LEVEL[c.level]||"", equipamento:IA_EQUIP[c.equip]||"", tempo:c.time?c.time+" min":""},
+  evitar: c.avoid||[] }; };
+const iaPlano = ()=>({dias: state.plan.days.map(d=>({tipo:d.type, foco:d.focus, itens:d.items.map(it=>({id:it.id, sets:+it.sets||3, reps:String(it.reps||""), rest:String(it.rest||""), mao:!!it.mao}))}))});
+
+// ---------- Ajustar plano com IA (função ajustarPlano): aplica na hora e deixa desfazer ----------
+const IA_PLANO_CHIPS = ["Quero treinar 3 dias por semana", "Treinos mais curtos, de 45 minutos", "Agora treino em casa só com halteres", "Mais foco em glúteos", "Estou com dor no ombro", "Trocar os exercícios que enjoei"];
+function renderIAPlano(){
+  return `<div class="iaform">
+    <p>Conte o que você quer mudar no seu plano da semana: dias, tempo, equipamento, foco ou alguma dor. A IA ajusta o plano e você pode desfazer depois.</p>
+    <textarea id="iatext" class="iatext" data-act="iaplanotext" maxlength="600" aria-label="O que você quer mudar no plano" placeholder="Ex.: quero treinar só 3 dias, e tira o agachamento livre que está incomodando o joelho.">${esc(ui.iaPlanoText||"")}</textarea>
+    <div class="chips">${IA_PLANO_CHIPS.map(c=>`<button class="chip" data-act="iachip" data-v="${esc(c)}">${esc(c)}</button>`).join("")}</div>
+    <button class="primary pbtn" data-act="iaplanogo" ${ui.iaBusy?"disabled":""}>${ui.iaBusy?"Ajustando seu plano…":"Ajustar plano"}</button>
+    <p class="note lmsg" role="alert">${esc(ui.iaMsg||"")}</p>
+    <p class="note">Sugestão automática: não substitui a orientação de um profissional de educação física ou de saúde. Até 10 pedidos de IA por dia.</p>
+  </div>`;
+}
+async function iaPlanoGo(){
+  const pedido = (ui.iaPlanoText||"").trim();
+  const fail = t=>{ ui.iaBusy = false; ui.iaMsg = t; render(); };
+  if(pedido.length<3){ fail("Escreva o que você quer mudar no plano."); return; }
+  if(!navigator.onLine){ fail("A IA precisa de internet. Sem sinal, ajuste o plano à mão."); return; }
+  if(!fb.user){ fail("Entre na sua conta para usar a IA."); return; }
+  ui.iaBusy = true; ui.iaMsg = ""; render();
+  try{
+    const t = await iaCall("ajustarPlano", {...iaBase(), pedido, plano: iaPlano(), recentes: iaRecentes()});
+    const days = (t.dias||[]).slice(0,6).map((d,i)=>({name:`Treino ${LETTERS[i]}`, type:String(d.tipo||"Treino").slice(0,20), focus:String(d.foco||""),
+      items:(d.itens||[]).filter(it=>BY[it.id]).map(it=>({id:it.id, sets:+it.sets||3, reps:String(it.reps||"8–12"), rest:RESTS.includes(it.rest)?it.rest:"90s"}))})).filter(d=>d.items.length);
+    if(!days.length){ fail(t.resumo || "Não consegui ajustar o plano com esse pedido. Tente descrever de outro jeito."); return; }
+    const antes = JSON.stringify(state.plan), diasAntes = state.cfg.days;
+    state.plan = {days, made:new Date().toISOString()};
+    if(days.length>=2 && days.length<=6) state.cfg.days = days.length;
+    state.planIA = {origem:"chat", resumo:String(t.resumo||"Plano ajustado.").slice(0,300), antes, diasAntes, depois:JSON.stringify(state.plan), at:Date.now()};
+    if(state.hojePick && state.hojePick.day!=null) state.hojePick = null;
+    ui.iaBusy = false; ui.iaPlanoText = ""; ui.planSub = {kind:"sug"}; state.day = 0;
+    save(); render(); window.scrollTo({top:0});
+  }catch(e){
+    const code = e && e.code ? (String(e.code).startsWith("functions/") ? e.code : "functions/"+e.code) : "";
+    fail(IA_ERR[code] && e.message ? e.message : "Não deu para ajustar agora. Confira a internet e tente de novo.");
+  }
+}
+
+// ---------- Ajuste automático da semana (função revisarSemana) ----------
+// No primeiro acesso de cada semana, se houve treino na semana passada, a IA faz até 2 ajustes pequenos no plano.
+// Não pede nada: aplica e mostra uma linha na tela Hoje com Desfazer, que some depois do próximo treino.
+const planIAShown = ()=>!!(state.planIA && !state.planIA.visto && state.plan);
+const planIAUndoable = ()=>!!(state.planIA && state.planIA.antes && state.planIA.depois===JSON.stringify(state.plan) && !state.session);
+function planIAUndo(){
+  const a = state.planIA; if(!a || !planIAUndoable()) return;
+  try{ state.plan = JSON.parse(a.antes); }catch(e){ return; }
+  if(a.diasAntes) state.cfg.days = a.diasAntes;
+  state.planIA = null; if(state.day>=state.plan.days.length) state.day = 0;
+  save(); render();
+}
+function renderPlanIANote(){
+  const a = state.planIA;
+  return `<div class="iaplanote"><b>${IA_ICO} ${a.origem==="semana"?"Ajustei seu plano para esta semana":"Plano ajustado pela IA"}</b>
+    <p>${esc(a.origem==="semana" ? a.resumo + "." + (a.motivo ? " " + a.motivo + "." : "") : a.resumo)}</p>
+    ${planIAUndoable()?`<button class="linkbtn" data-act="iadesfazer">Desfazer</button>`:""}</div>`;
+}
+const exNome = id=>BY[id] ? BY[id].name : id;
+function aplicarRevisao(mudancas){
+  const feitas = [];
+  for(const m of mudancas||[]){
+    const d = state.plan.days[m.dia]; if(!d) continue;
+    const it = d.items.find(x=>x.id===m.id);
+    if(m.tipo==="trocar" && it && !it.mao && BY[m.novo] && !d.items.some(x=>x.id===m.novo)){ it.id = m.novo; feitas.push(`${exNome(m.id)} → ${exNome(m.novo)}`); }
+    else if(m.tipo==="series" && it && !it.mao && m.series>=1 && m.series<=6){ const dif = m.series - (+it.sets||0); if(!dif) continue; it.sets = m.series; feitas.push(`${dif>0?"+":"−"}${Math.abs(dif)} série${Math.abs(dif)>1?"s":""} de ${exNome(it.id)}`); }
+    else if(m.tipo==="adicionar" && BY[m.novo] && !d.items.some(x=>x.id===m.novo)){ const dose = DOSE[state.cfg.goal][BY[m.novo].comp?"c":"i"]; d.items.push({id:m.novo, sets:m.series||dose[0], reps:dose[1], rest:dose[2]}); feitas.push(`${exNome(m.novo)} entrou no ${d.name}`); }
+    else if(m.tipo==="remover" && it && !it.mao && d.items.length>3){ d.items = d.items.filter(x=>x!==it); feitas.push(`${exNome(m.id)} saiu do ${d.name}`); }
+  }
+  return feitas;
+}
+let revBusy = false;
+async function revisaoSemanal(){
+  if(revBusy || !FB_ON || !IA_PRONTA || !fb.user || !navigator.onLine || !state.plan || state.session || !dbRef) return;
+  const semana = dayKey(weekStart(new Date()));
+  if(state.revSemana===semana) return;
+  const ini = new Date(weekStart(new Date())); ini.setDate(ini.getDate()-7);
+  const passada = state.history.filter(h=>{ const t = new Date(h.date); return t>=ini && t<weekStart(new Date()); });
+  if(!passada.length){ state.revSemana = semana; save(); return; }        // sem treino na semana passada: nada a revisar
+  const tentKey = "montai-rev-tentativa", agora = Date.now();
+  try{ if(agora - (+localStorage.getItem(tentKey)||0) < 6*3600e3) return; localStorage.setItem(tentKey, String(agora)); }catch(e){}
+  revBusy = true;
+  try{
+    const desde = new Date(ini); desde.setDate(desde.getDate()-21);
+    const historico = state.history.filter(h=>new Date(h.date)>=desde).map(h=>({data:h.date, tipo:h.dayType||h.dayName||"", itens:(h.entries||[]).map(en=>({id:en.id, series:(en.sets||[]).map(x=>({kg:x.kg, reps:x.reps}))}))}));
+    const antesObj = JSON.stringify(state.plan);
+    const t = await iaCall("revisarSemana", {...iaBase(), equip:state.cfg.equip, plano: iaPlano(), historico});
+    if(state.session || JSON.stringify(state.plan)!==antesObj) return;            // a pessoa mexeu no plano enquanto isso: tenta na próxima vez
+    state.revSemana = t.semana || semana;
+    const feitas = aplicarRevisao(t.mudancas);
+    if(feitas.length){
+      state.planIA = {origem:"semana", resumo:feitas.join(" · "), motivo:String(t.motivo||"").replace(/\.$/,"").slice(0,300), antes:antesObj, depois:JSON.stringify(state.plan), at:Date.now()};
+    }
+    save(); render();
+  }catch(e){ /* sem IA agora: tenta de novo mais tarde */ }
+  finally{ revBusy = false; }
 }
 function renderMine(){
   const m = ui.draft; if(!m) return "";
@@ -1911,7 +2028,7 @@ function renderPlanSug(){
     const list = EX.filter(e=>e.g===g && EQ_OK[eq].includes(e.eq));
     return list.length?`<optgroup label="${label}">${list.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join("")}</optgroup>`:"";
   }).join("");
-  const saved = `<div class="savednote${ui.justGen?" fresh":""}"><span aria-hidden="true">${ICO.check}</span><div><b>${ui.justGen?"Plano novo gerado e salvo":"Plano salvo"}</b><small>${p.days.length} treinos · ${esc($("#cfgSum").textContent)}</small></div></div>`;
+  const saved = planIAShown() ? renderPlanIANote() : `<div class="savednote${ui.justGen?" fresh":""}"><span aria-hidden="true">${ICO.check}</span><div><b>${ui.justGen?"Plano novo gerado e salvo":"Plano salvo"}</b><small>${p.days.length} treinos · ${esc($("#cfgSum").textContent)}</small></div></div>`;
   ui.justGen = false;
   return `${saved}<div class="grid2">
     <section class="panel">
@@ -2017,6 +2134,7 @@ function renderHome(){
         ${ui.list?`<ol class="ficha">${items.map(it=>`<li><span>${esc(BY[it.id]?.name||it.id)}</span><span class="num">${it.sets? (Array.isArray(it.sets)?it.sets.length:esc(it.sets))+" × "+esc(it.reps||range(entryReps(it)).hi):""}</span></li>`).join("")}</ol>`:""}
         ${nota?`<button class="linkbtn" data-act="tgnota">${sg?"Nota do personal":"Por que este treino"} ${ui.nota?ICO.up:ICO.down}</button>${ui.nota?`<p class="nota">${esc(nota)}</p>`:""}`:""}
         ${state.history.length?weekRow():""}
+        ${!s && planIAShown() && state.planIA.origem==="semana" ? `<p class="iaajuste">${IA_ICO}<span>Ajustei seu plano: ${esc(state.planIA.resumo)}${planIAUndoable()?`<button class="linkbtn" data-act="iadesfazer">Desfazer</button>`:""}</span></p>`:""}
         <button class="primary pbtn" ${act}>${s?"Continuar treino":"Começar treino"}</button>
       </div>
     </section>
@@ -2648,13 +2766,14 @@ function finishSession(){
   const s = state.session, day = sessDay(s);
   const target = s.day>=0 ? day : (s.mineId ? state.mine.find(m=>m.id===s.mineId) : null);
   if(target) for(const en of s.entries){
-    if(en.from && en.keep==="new"){ const it = target.items.find(x=>x.id===en.from); if(it) it.id = en.id; }
+    if(en.from && en.keep==="new"){ const it = target.items.find(x=>x.id===en.from); if(it){ it.id = en.id; it.mao = true; } }
   }
   const entries = s.entries.map(en=>({id:en.id, sets:en.sets.filter(x=>x.done).map(({kg,reps})=>({kg,reps}))}));
   const dur = s.started ? Math.round((Date.now()-new Date(s.started))/60000) : 0;
   state.history.push({date:new Date().toISOString(), dayName:day.name, dayType:(s.custom ? (s.mineId ? "Meu treino" : "Personal") : day.type), entries,
     ...(dur>0 && dur<=300 ? {dur} : {}), ...(s.sugId?{sugId:s.sugId}:{})});
   state.novo = false;
+  if(state.planIA) state.planIA.visto = true;
   state.session = null; ui.min = false; state.view = "historico"; ui.hopen = state.history.length-1; stopTimer(); save(true); render(); window.scrollTo({top:0});
   return state.history.length-1;
 }
@@ -2668,7 +2787,7 @@ $("#gen").addEventListener("click", ()=>{
   genConfirm = false; btn.textContent = "Gerar plano";
   $("#cfgBox").open = false;
   state.novo = false;
-  state.cfg = {...cfg, avoid:(state.cfg&&state.cfg.avoid)||[], bars:(state.cfg&&state.cfg.bars)||{}}; state.plan = generate(state.cfg); state.session = null; state.day = 0; state.view = "plano"; ui.planSub = {kind:"sug"}; ui.justGen = true;
+  state.cfg = {...cfg, avoid:(state.cfg&&state.cfg.avoid)||[], bars:(state.cfg&&state.cfg.bars)||{}}; state.plan = generate(state.cfg); state.planIA = null; state.session = null; state.day = 0; state.view = "plano"; ui.planSub = {kind:"sug"}; ui.justGen = true;
   if(state.hojePick && state.hojePick.day!=null) state.hojePick = null;
   save(); render();
 });
@@ -2723,8 +2842,11 @@ view.addEventListener("click", e=>{
   // Plano
   if(act==="opensug"){ ui.planSub = {kind:"sug"}; render(); window.scrollTo({top:0}); return; }
   if(act==="openia"){ ui.planSub = {kind:"ia"}; ui.iaMsg = ""; render(); window.scrollTo({top:0}); $("#iatext")?.focus(); return; }
-  if(act==="iachip"){ const t = (ui.iaText||"").trim(), v = b.dataset.v; ui.iaText = t ? (t.replace(/[.,;]?$/,"")+", "+v.charAt(0).toLowerCase()+v.slice(1)) : v; render(); const el = $("#iatext"); if(el){ el.focus(); el.setSelectionRange(el.value.length, el.value.length); } return; }
+  if(act==="iachip"){ const t = ((ui.planSub&&ui.planSub.kind==="iaplano" ? ui.iaPlanoText : ui.iaText)||"").trim(), v = b.dataset.v, k = ui.planSub&&ui.planSub.kind==="iaplano" ? "iaPlanoText" : "iaText"; ui[k] = t ? (t.replace(/[.,;]?$/,"")+", "+v.charAt(0).toLowerCase()+v.slice(1)) : v; render(); const el = $("#iatext"); if(el){ el.focus(); el.setSelectionRange(el.value.length, el.value.length); } return; }
   if(act==="iago"){ if(!ui.iaBusy) iaGo(); return; }
+  if(act==="openiaplano"){ ui.planSub = {kind:"iaplano"}; ui.iaMsg = ""; render(); window.scrollTo({top:0}); $("#iatext")?.focus(); return; }
+  if(act==="iaplanogo"){ if(!ui.iaBusy) iaPlanoGo(); return; }
+  if(act==="iadesfazer"){ planIAUndo(); return; }
   if(act==="newmine"){ ui.draft = {id:"m"+Date.now().toString(36), name:`Meu treino ${String.fromCharCode(65+state.mine.length)}`, items:[]}; ui.planSub = {kind:"mine"}; ui.editIdx = null; ui.confirmDelMine = false; ui.cat = {q:"", g:"all", sel:[]}; render(); return; }
   if(act==="openmine"){ const m = state.mine.find(x=>x.id===b.dataset.id); if(!m) return; ui.draft = JSON.parse(JSON.stringify(m)); ui.planSub = {kind:"mine"}; ui.editIdx = null; ui.confirmDelMine = false; render(); window.scrollTo({top:0}); return; }
   if(act==="opencat"){ ui.cat = {q:"", g:"all", sel:[]}; render(); return; }
@@ -2765,7 +2887,7 @@ view.addEventListener("click", e=>{
   if(act==="del"){ d.items.splice(+b.dataset.i,1); save(); render(); }
   else if(act==="add"){
     const id = $("#addsel").value; const dose = DOSE[state.cfg.goal][BY[id].comp?"c":"i"];
-    d.items.push({id, sets:dose[0], reps:dose[1], rest:dose[2]}); save(); render();
+    d.items.push({id, sets:dose[0], reps:dose[1], rest:dose[2], mao:true}); save(); render();
   }
   else if(act==="start"){ startSession(state.day); }
   else if(act==="startday"){ startSession(+b.dataset.day); }
@@ -2796,7 +2918,7 @@ view.addEventListener("click", e=>{
   else if(act==="swapex"){
     const S = state.session, en = S.entries[+b.dataset.e], id = b.dataset.id, old = en.from || en.id;
     const target = S.day>=0 ? sessDay(S) : (S.mineId ? state.mine.find(m=>m.id===S.mineId) : null);
-    if(target){ const it = target.items.find(x=>x.id===old); if(it) it.id = id; }
+    if(target){ const it = target.items.find(x=>x.id===old); if(it){ it.id = id; it.mao = true; } }
     dislike(en.id); if(en.from && en.from!==en.id) dislike(en.from);
     const done = en.sets.filter(x=>x.done).length;
     en.id = id; delete en.from; delete en.keep;
@@ -2834,9 +2956,9 @@ view.addEventListener("click", e=>{
 view.addEventListener("change", e=>{
   const el = e.target, act = el.dataset.act; if(!act) return;
   const d = state.plan.days[state.day];
-  if(act==="swap"){ d.items[+el.dataset.i].id = el.value; save(); render(); }
-  else if(act==="sets"){ d.items[+el.dataset.i].sets = Math.max(1,Math.min(10,+el.value||1)); save(); render(); }
-  else if(act==="reps"||act==="rest"){ d.items[+el.dataset.i][act] = el.value; save(); }
+  if(act==="swap"){ d.items[+el.dataset.i].id = el.value; d.items[+el.dataset.i].mao = true; save(); render(); }
+  else if(act==="sets"){ d.items[+el.dataset.i].sets = Math.max(1,Math.min(10,+el.value||1)); d.items[+el.dataset.i].mao = true; save(); render(); }
+  else if(act==="reps"||act==="rest"){ d.items[+el.dataset.i][act] = el.value; d.items[+el.dataset.i].mao = true; save(); }
 });
 view.addEventListener("submit", e=>{
   if(e.target.id!=="plform") return;
@@ -2849,6 +2971,7 @@ view.addEventListener("input", e=>{
   const el = e.target, act = el.dataset.act;
   if(act==="mname"){ if(ui.draft) ui.draft.name = el.value; return; }
   if(act==="iatext"){ ui.iaText = el.value; return; }
+  if(act==="iaplanotext"){ ui.iaPlanoText = el.value; return; }
   if(act==="mreps"){ if(ui.draft) ui.draft.items[+el.dataset.i].reps = el.value; return; }
   if(act==="catq"){ ui.cat.q = el.value; $("#catgrid").innerHTML = catGrid(); EXA.mount($("#catgrid")); return; }
   if(act==="pval"){ const st = state.session.entries[+el.dataset.e].sets[+el.dataset.s]; st[el.dataset.f] = el.value.replace(/[^0-9.,]/g,""); st.t = true; save(); return; }
@@ -2892,8 +3015,8 @@ $("#picker").addEventListener("click", e=>{
   if(chip){ picker.group = chip.dataset.g; renderPicker(); return; }
   const pk = e.target.closest("[data-pick]"); if(!pk) return;
   const id = pk.dataset.pick, d = state.plan.days[state.day];
-  if(picker.mode==="swap"){ dislike(d.items[picker.i].id); d.items[picker.i].id = id; }
-  else { const dose = DOSE[state.cfg.goal][BY[id].comp?"c":"i"]; d.items.push({id, sets:dose[0], reps:dose[1], rest:dose[2]}); }
+  if(picker.mode==="swap"){ dislike(d.items[picker.i].id); d.items[picker.i].id = id; d.items[picker.i].mao = true; }
+  else { const dose = DOSE[state.cfg.goal][BY[id].comp?"c":"i"]; d.items.push({id, sets:dose[0], reps:dose[1], rest:dose[2], mao:true}); }
   closePicker(); save(); render();
 });
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && picker) closePicker(); });
@@ -3035,7 +3158,7 @@ async function fbConnect(){
     }
     else if(state.savedAt) save(true);
   }catch(e){ /* sem conexão: segue com o que está no aparelho */ }
-  finally{ if(profile===p){ ui.loadingAcc = false; render(); } }
+  finally{ if(profile===p){ ui.loadingAcc = false; render(); revisaoSemanal(); } }
 }
 const FB_ERR = {"auth/invalid-email":"Confira o e-mail digitado.", "auth/missing-password":"Digite a senha.", "auth/weak-password":"A senha precisa ter pelo menos 6 caracteres.",
   "auth/email-already-in-use":"Já existe uma conta com esse e-mail. Toque em Entrar.", "auth/invalid-credential":"E-mail ou senha incorretos.", "auth/wrong-password":"E-mail ou senha incorretos.",
