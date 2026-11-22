@@ -693,6 +693,29 @@ label.f,.row .grp,.exbtn small,.card .meta2{text-transform:none;letter-spacing:0
 .frow .mt b{font-size:1rem}
 .frow:disabled{opacity:.45}
 .frow .ic{color:var(--ok)}
+/* Transições: a tela nova entra suave (só na troca de tela; digitar e os botões de +/− não animam) */
+@keyframes trfade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes trpush{from{opacity:0;transform:translateX(22px)}to{opacity:1;transform:none}}
+@keyframes trpop{from{opacity:0;transform:translateX(-22px)}to{opacity:1;transform:none}}
+@keyframes trsoft{from{opacity:.35}to{opacity:1}}
+@keyframes sheetup{from{transform:translateY(100%)}to{transform:none}}
+@keyframes scrimin{from{opacity:0}to{opacity:1}}
+#view.tr-fade>*{animation:trfade .3s cubic-bezier(.2,.8,.2,1) both}
+#view.tr-push>*{animation:trpush .32s cubic-bezier(.2,.8,.2,1) both}
+#view.tr-pop>*{animation:trpop .32s cubic-bezier(.2,.8,.2,1) both}
+#view.tr-soft>*{animation:trsoft .24s ease-out both}
+#view.tr-fade>*:nth-child(2),#view.tr-push>*:nth-child(2),#view.tr-pop>*:nth-child(2){animation-delay:.03s}
+#view.tr-fade>*:nth-child(n+3),#view.tr-push>*:nth-child(n+3),#view.tr-pop>*:nth-child(n+3){animation-delay:.06s}
+.sheet2.in,.pfsheet.in{animation:sheetup .34s cubic-bezier(.2,.9,.25,1) both}
+.sheet2.troca{animation:trsoft .22s ease-out both}
+.scrim.in,.scrim2.in{animation:scrimin .25s ease-out both}
+.modal.in{animation:scrimin .22s ease-out both}
+.modal.in>.sheet{animation:sheetup .36s cubic-bezier(.2,.9,.25,1) both}
+button,a.linkbtn{transition:transform .14s cubic-bezier(.2,.8,.2,1),background-color .2s,color .2s,opacity .2s,box-shadow .2s;-webkit-tap-highlight-color:transparent}
+button:active:not(:disabled){transform:scale(.97)}
+.othcard:active,.sugcard2:active,.myrow:active,.sheetbtn:active,.daytab:active{transform:scale(.985)}
+.chip{transition:background-color .2s,color .2s,transform .14s}
+.ficha,.nota,.duvresp{animation:trfade .26s cubic-bezier(.2,.8,.2,1) both}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 
@@ -1721,13 +1744,42 @@ function render(){
   $("#cfgT").textContent = state.view==="objetivo" ? "Monte seu plano" : "Ajustar plano";
   $("#tabbar").hidden = inSession;
   const v = $("#view");
+  const tela = telaAtual(inSession), mudou = tela.k!==lastTela.k, sheetNovo = tela.sheet && tela.sheet!==lastTela.sheet, profNovo = ui.prof && !lastTela.prof;
   if(ui.loadingAcc) v.innerHTML = `<div class="empty loadacc">Carregando seus treinos…</div>`;
   else if(state.view==="plano") v.innerHTML = renderPlan();
   else if(state.view==="treinar") v.innerHTML = renderSession();
   else if(state.view==="objetivo") v.innerHTML = renderGoal() + renderProgress();
   else v.innerHTML = renderHistory() + renderBackup();
+  if(mudou && lastTela.k){
+    v.classList.remove("tr-fade","tr-push","tr-pop","tr-soft"); void v.offsetWidth;
+    v.classList.add("tr-"+transicao(lastTela, tela));
+    clearTimeout(trT); trT = setTimeout(()=>v.classList.remove("tr-fade","tr-push","tr-pop","tr-soft"), 450);
+  }
+  if(sheetNovo && !lastTela.sheet) v.querySelectorAll(".sheet2,.scrim").forEach(x=>x.classList.add("in"));
+  else if(sheetNovo) v.querySelector(".sheet2")?.classList.add("troca");
+  if(profNovo) $("#over").querySelectorAll(".pfsheet,.scrim2").forEach(x=>x.classList.add("in"));
+  lastTela = {...tela, prof:!!ui.prof};
   EXA.mount(v);
   if(typeof syncWake==="function") syncWake();
+}
+// Identifica "qual tela" está aberta, para animar só quando ela muda.
+let lastTela = {k:""}, trT = null;
+function telaAtual(inSession){
+  const S = state.session, sub = ui.planSub ? ui.planSub.kind : "";
+  let fundo = 0, k;
+  if(ui.loadingAcc) k = "load";
+  else if(inSession){ const p = pos(S); k = `sess:${S.phase||"set"}:${S.review?"r":""}:${p?p.ei+"."+p.si:"-"}`; fundo = 2; }
+  else if(state.view==="plano"){ k = `plano:${sub}${sub==="sug"?":"+state.day:""}${sub==="mine"&&ui.cat?":cat":""}`; fundo = sub ? (ui.cat ? 2 : 1) : 0; }
+  else if(state.view==="treinar"){ const hp = state.hojePick; k = `hoje:${hp?(hp.id||hp.day):""}`; }
+  else k = state.view;
+  return {k, view:state.view, fundo, sheet: inSession && S.sheet ? S.sheet : "", sess: inSession, ei: inSession && pos(S) ? pos(S).ei : -1};
+}
+function transicao(a, b){
+  if(a.view!==b.view || a.sess!==b.sess) return "fade";            // trocar de aba, começar ou sair do treino
+  if(b.sess) return a.ei!==b.ei ? "push" : "soft";                  // próximo exercício desliza; série e descanso esmaecem
+  if(b.fundo>a.fundo) return "push";                                // entrar numa subtela
+  if(b.fundo<a.fundo) return "pop";                                 // voltar
+  return "soft";                                                    // mesma altura: outro dia do plano, outro treino de hoje
 }
 
 function dayTabs(){
@@ -3178,7 +3230,7 @@ const EQ_LABEL = {b:"Barra", d:"Halteres", g:"Máquina ou polia", c:"Peso corpor
 function openPicker(mode, i){
   const d = state.plan.days[state.day];
   picker = {mode, i, group: mode==="swap" ? BY[d.items[i].id].g : (picker?.group || "peito")};
-  renderPicker(); $("#picker").hidden = false; document.body.style.overflow = "hidden";
+  renderPicker(); const pk = $("#picker"); pk.classList.remove("in"); pk.hidden = false; void pk.offsetWidth; pk.classList.add("in"); document.body.style.overflow = "hidden";
   $("#pkClose").focus();
 }
 function closePicker(){ $("#picker").hidden = true; document.body.style.overflow = ""; picker = null; }
