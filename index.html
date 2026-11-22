@@ -1693,7 +1693,7 @@ function render(){
   $("#cfgSum").textContent = [opt("goal"), `${state.cfg.days} dias`, opt("time"), state.cfg.enf!=="none"?`ênfase: ${opt("enf")}`:""].filter(Boolean).join(" · ");
   document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected", t.dataset.view===state.view));
   const inSession = !!state.session && state.view==="treinar" && !ui.min;
-  const sub = state.view==="plano" && ui.planSub ? (ui.planSub.kind==="sug" ? "Treino sugerido" : ui.planSub.kind==="ia" ? "Montar com IA" : ui.planSub.kind==="iaplano" ? "Ajustar plano" : "Montar treino") : null;
+  const sub = state.view==="plano" && ui.planSub ? (ui.planSub.kind==="sug" ? "Treino sugerido" : ui.planSub.kind==="ia" ? "Treino de hoje" : ui.planSub.kind==="iaplano" ? "Mudar meu plano" : "Montar treino") : null;
   $("#ptitle").textContent = sub || {plano:"Plano", objetivo:"Objetivo", historico:"Histórico"}[state.view] || "Treino";
   paintHeader(state.view==="treinar" && !sub);
   $("#smoke").hidden = false; $("#smoke").classList.toggle("soft", state.view!=="treinar");
@@ -1734,12 +1734,12 @@ function renderPlanHome(){
     <button class="sugcard2" data-act="opensug"><img src="img/capa.jpg" alt="" aria-hidden="true">
       <span class="sgtxt"><small>Treino sugerido</small><b>Plano de ${n} dias</b><small class="sggoal">${esc($("#cfgSum").textContent)}</small></span><span class="chev" aria-hidden="true">${ICO.right}</span></button>
     <button class="linkbtn goallink" data-act="gogoal">Mudar objetivo, dias ou foco</button>
-    ${FB_ON && IA_PRONTA?`<button class="sec pbtn iabtn iaplanbtn" data-act="openiaplano">${IA_ICO} Ajustar plano com IA</button>`:""}
+    ${FB_ON && IA_PRONTA?`<button class="sec pbtn iabtn iaplanbtn" data-act="openiaplano">${IA_ICO} Mudar meu plano com IA</button>`:""}
     <h2 class="sech">Meus treinos</h2>
     ${state.mine.length ? `<div class="mylist">${state.mine.map(m=>`<button class="myrow" data-act="openmine" data-id="${m.id}">${DUMB}<span class="mt"><b>${esc(m.name)}</b><small>${m.items.length} exercícios${m.id===pickId?" · treino de hoje":""}</small></span><span class="chev" aria-hidden="true">${ICO.right}</span></button>`).join("")}</div>`
       : `<p class="note">Nenhum treino montado ainda.</p>`}
     <button class="primary pbtn" data-act="newmine">+ Montar treino</button>
-    ${FB_ON && IA_PRONTA?`<button class="sec pbtn iabtn" data-act="openia">${IA_ICO} Montar com IA</button>`:""}
+    ${FB_ON && IA_PRONTA?`<button class="sec pbtn iabtn" data-act="openia">${IA_ICO} Treino de hoje com IA</button>`:""}
   </div>`;
 }
 const RESTS = ["45s","60s","90s","2 min","3 min"];
@@ -1818,7 +1818,7 @@ const iaPlano = ()=>({dias: state.plan.days.map(d=>({tipo:d.type, foco:d.focus, 
 const IA_PLANO_CHIPS = ["Quero treinar 3 dias por semana", "Treinos mais curtos, de 45 minutos", "Agora treino em casa só com halteres", "Mais foco em glúteos", "Estou com dor no ombro", "Trocar os exercícios que enjoei"];
 function renderIAPlano(){
   return `<div class="iaform">
-    <p>Conte o que você quer mudar no seu plano da semana: dias, tempo, equipamento, foco ou alguma dor. A IA ajusta o plano e você pode desfazer depois.</p>
+    <p>Aqui a IA muda o seu plano da semana inteiro: dias, tempo, equipamento, foco ou alguma dor. Para um treino só de hoje, use “Treino de hoje com IA”. Dá para desfazer depois.</p>
     <textarea id="iatext" class="iatext" data-act="iaplanotext" maxlength="600" aria-label="O que você quer mudar no plano" placeholder="Ex.: quero treinar só 3 dias, e tira o agachamento livre que está incomodando o joelho.">${esc(ui.iaPlanoText||"")}</textarea>
     <div class="chips">${IA_PLANO_CHIPS.map(c=>`<button class="chip" data-act="iachip" data-v="${esc(c)}">${esc(c)}</button>`).join("")}</div>
     <button class="primary pbtn" data-act="iaplanogo" ${ui.iaBusy?"disabled":""}>${ui.iaBusy?"Ajustando seu plano…":"Ajustar plano"}</button>
@@ -1843,7 +1843,8 @@ async function iaPlanoGo(){
     if(days.length>=2 && days.length<=6) state.cfg.days = days.length;
     state.planIA = {origem:"chat", resumo:String(t.resumo||"Plano ajustado.").slice(0,300), antes, diasAntes, depois:JSON.stringify(state.plan), at:Date.now()};
     if(state.hojePick && state.hojePick.day!=null) state.hojePick = null;
-    ui.iaBusy = false; ui.iaPlanoText = ""; ui.planSub = {kind:"sug"}; state.day = 0;
+    const velho = JSON.parse(antes).days||[], mudou = days.findIndex((d,i)=>!velho[i] || JSON.stringify(d.items.map(x=>x.id))!==JSON.stringify(velho[i].items.map(x=>x.id)));
+    ui.iaBusy = false; ui.iaPlanoText = ""; ui.planSub = {kind:"sug"}; state.day = mudou>=0 ? mudou : 0;
     save(); render(); window.scrollTo({top:0});
   }catch(e){
     const code = e && e.code ? (String(e.code).startsWith("functions/") ? e.code : "functions/"+e.code) : "";
