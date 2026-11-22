@@ -1994,10 +1994,16 @@ function lerFala(txt, semCarga){
   if(kg!=null && !(kg>=0 && kg<=500)) kg = null;
   return kg==null && reps==null ? null : {kg, reps};
 }
-let rec = null;
+let rec = null, grav = null;
+// No app instalado na tela de início do iPhone o reconhecimento do navegador não funciona: aí o app grava e o servidor transcreve.
+const STANDALONE = navigator.standalone===true || matchMedia("(display-mode: standalone)").matches;
+const PODE_GRAVAR = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && (window.AudioContext || window.webkitAudioContext));
+let vozModo = SR && !STANDALONE ? "nav" : "grav";
+const vozOk = ()=>vozModo==="nav" || (FB_ON && IA_PRONTA && PODE_GRAVAR);
 const vozMsg = ()=>ui.vozMsg && Date.now()-ui.vozMsg.t < 6000 ? ui.vozMsg.txt : "";
-function vozParar(){ if(rec){ try{ rec.abort(); }catch(e){} rec = null; } ui.voz = null; }
+function vozParar(){ if(rec){ try{ rec.abort(); }catch(e){} rec = null; } gravarParar(true); ui.voz = null; }
 function vozAlternar(){
+  if(vozModo==="grav"){ if(grav){ gravarParar(); return; } if(ui.voz) return; gravarIniciar(); return; }
   if(!SR) return;
   if(rec){ vozParar(); render(); return; }
   let finais = null;
@@ -2008,11 +2014,73 @@ function vozAlternar(){
       if(ui.voz){ ui.voz.txt = r[0].transcript; const el = $("#voztxt"); if(el) el.textContent = r[0].transcript; }
       if(r.isFinal) finais = Array.from(r).map(a=>a.transcript);
     };
-    rec.onerror = e=>{ ui.vozOk = false; ui.vozMsg = {t:Date.now(), txt: e.error==="not-allowed"||e.error==="service-not-allowed" ? "Libere o microfone para este site nas configurações do navegador." : e.error==="no-speech" ? "Não ouvi nada. Toque no microfone e diga a carga e as repetições." : e.error==="aborted" ? "" : "Não deu para ouvir agora. Tente de novo."}; };
+    rec.onerror = e=>{ if(e.error==="service-not-allowed" && FB_ON && IA_PRONTA && PODE_GRAVAR){ vozModo = "grav"; ui.vozOk = false; ui.vozMsg = {t:Date.now(), txt:"Toque no microfone de novo para gravar."}; return; } ui.vozOk = false; ui.vozMsg = {t:Date.now(), txt: e.error==="not-allowed"||e.error==="service-not-allowed" ? "Libere o microfone para este site nas configurações do navegador." : e.error==="no-speech" ? "Não ouvi nada. Toque no microfone e diga a carga e as repetições." : e.error==="aborted" ? "" : "Não deu para ouvir agora. Tente de novo."}; };
     rec.onend = ()=>{ rec = null; ui.voz = null; if(finais) vozAplicar(finais); else render(); };
     ui.voz = {txt:""}; ui.vozMsg = null; render();
     rec.start();
   }catch(e){ rec = null; ui.voz = null; ui.vozOk = false; ui.vozMsg = {t:Date.now(), txt:"O reconhecimento de voz não funcionou neste navegador."}; render(); }
+}
+async function gravarIniciar(){
+  if(!fb.user){ ui.vozOk = false; ui.vozMsg = {t:Date.now(), txt:"Entre na sua conta para registrar falando."}; render(); return; }
+  if(!navigator.onLine){ ui.vozOk = false; ui.vozMsg = {t:Date.now(), txt:"Sem internet não dá para entender a fala. Use os botões."}; render(); return; }
+  ui.voz = {txt:""}; ui.vozMsg = null; render();
+  let stream = null, ctx = null;
+  try{
+    const AC = window.AudioContext || window.webkitAudioContext;
+    ctx = new AC(); const pronto = ctx.resume();
+    stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true, noiseSuppression:true, autoGainControl:true, channelCount:1}});
+    await pronto;
+    if(!ui.voz){ stream.getTracks().forEach(t=>t.stop()); ctx.close(); return; }      // cancelou enquanto pedia o microfone
+    const src = ctx.createMediaStreamSource(stream), proc = ctx.createScriptProcessor(4096, 1, 1);
+    const g = grav = {stream, ctx, src, proc, partes:[], rate:ctx.sampleRate, falou:false, silencio:0, total:0, pico:0};
+    proc.onaudioprocess = e=>{
+      if(grav!==g) return;
+      const d = e.inputBuffer.getChannelData(0); g.partes.push(new Float32Array(d));
+      let q = 0; for(let i=0;i<d.length;i++) q += d[i]*d[i];
+      const rms = Math.sqrt(q/d.length), dur = d.length/g.rate; g.total += dur; g.pico = Math.max(g.pico, rms);
+      if(rms > Math.max(.02, g.pico*.35)){ g.falou = true; g.silencio = 0; } else if(g.falou) g.silencio += dur;
+      if((g.falou && g.silencio > .9) || g.total > 6 || (!g.falou && g.total > 4.5)) gravarParar();
+    };
+    src.connect(proc); proc.connect(ctx.destination);
+  }catch(e){
+    if(stream) stream.getTracks().forEach(t=>t.stop()); if(ctx) try{ ctx.close(); }catch(x){}
+    grav = null; ui.voz = null; ui.vozOk = false;
+    ui.vozMsg = {t:Date.now(), txt: e && (e.name==="NotAllowedError" || e.name==="SecurityError") ? "Libere o microfone: Ajustes > MontAI Fit (ou Safari) > Microfone." : "Não deu para usar o microfone agora."};
+    render();
+  }
+}
+function gravarParar(cancelar){
+  const g = grav; if(!g) return; grav = null;
+  try{ g.proc.onaudioprocess = null; g.proc.disconnect(); g.src.disconnect(); }catch(e){}
+  g.stream.getTracks().forEach(t=>t.stop()); try{ g.ctx.close(); }catch(e){}
+  if(!cancelar) gravarEnviar(g);
+}
+// Junta o que foi gravado, reduz para 16 kHz mono e monta um WAV.
+function wav16k(partes, rate){
+  const tot = partes.reduce((a,p)=>a+p.length, 0), all = new Float32Array(tot); let o = 0; for(const p of partes){ all.set(p, o); o += p.length; }
+  const k = rate/16000, n = Math.floor(tot/k), buf = new ArrayBuffer(44+n*2), dv = new DataView(buf);
+  const w = (at, t)=>{ for(let i=0;i<t.length;i++) dv.setUint8(at+i, t.charCodeAt(i)); };
+  w(0,"RIFF"); dv.setUint32(4, 36+n*2, true); w(8,"WAVE"); w(12,"fmt "); dv.setUint32(16,16,true); dv.setUint16(20,1,true); dv.setUint16(22,1,true);
+  dv.setUint32(24,16000,true); dv.setUint32(28,32000,true); dv.setUint16(32,2,true); dv.setUint16(34,16,true); w(36,"data"); dv.setUint32(40,n*2,true);
+  for(let i=0;i<n;i++){ const a = Math.floor(i*k), b = Math.min(tot, Math.floor((i+1)*k)); let s = 0; for(let j=a;j<b;j++) s += all[j]; const v = Math.max(-1, Math.min(1, s/Math.max(1,b-a))); dv.setInt16(44+i*2, v<0 ? v*0x8000 : v*0x7fff, true); }
+  const u = new Uint8Array(buf); let bin = ""; for(let i=0;i<u.length;i+=8192) bin += String.fromCharCode.apply(null, u.subarray(i, i+8192));
+  return btoa(bin);
+}
+async function gravarEnviar(g){
+  if(!g.falou){ ui.voz = null; ui.vozOk = false; ui.vozMsg = {t:Date.now(), txt:"Não ouvi nada. Toque no microfone e diga a carga e as repetições."}; render(); return; }
+  ui.voz = {txt:"Entendendo…"}; const el = $("#voztxt"); if(el) el.textContent = "Entendendo…";
+  try{
+    const t = await iaCall("transcreverFala", {audio: wav16k(g.partes, g.rate)});
+    ui.voz = null;
+    const falas = (t.falas||[]).filter(Boolean);
+    if(!falas.length){ ui.vozOk = false; ui.vozMsg = {t:Date.now(), txt:"Não entendi. Fale perto do celular, por exemplo: “sessenta quilos, dez”."}; render(); return; }
+    vozAplicar(falas);
+  }catch(e){
+    ui.voz = null; ui.vozOk = false;
+    const code = e && e.code ? (String(e.code).startsWith("functions/") ? e.code : "functions/"+e.code) : "";
+    ui.vozMsg = {t:Date.now(), txt: IA_ERR[code] && e.message ? e.message : "Não deu para entender agora. Tente de novo ou use os botões."};
+    render();
+  }
 }
 function vozAplicar(falas){
   const S = state.session, p = S && pos(S); if(!p || S.phase==="rest"){ render(); return; }
@@ -2441,7 +2509,7 @@ function renderSet(s, p){
         <label class="sval"><input class="bignum" id="prp" inputmode="numeric" autocomplete="off" data-act="pval" data-f="reps" data-e="${p.ei}" data-s="${p.si}" value="${esc(st.reps)}" placeholder="0" aria-label="Repetições"></label>
         <button class="sq" data-act="step" data-f="reps" data-d="-1" aria-label="Diminuir repetições">−</button><button class="sq" data-act="step" data-f="reps" data-d="1" aria-label="Aumentar repetições">+</button></div>
     </div>
-    <div class="regrow">${SR?`<button class="mic${ui.voz?" on":""}" data-act="voz" aria-label="${ui.voz?"Parar de ouvir":"Registrar a série falando"}" aria-pressed="${!!ui.voz}">${MIC_ICO}</button>`:""}<button class="primary pbtn" data-act="register">Registrar série</button></div>
+    <div class="regrow">${vozOk()?`<button class="mic${ui.voz?" on":""}" data-act="voz" aria-label="${ui.voz?"Parar de ouvir":"Registrar a série falando"}" aria-pressed="${!!ui.voz}">${MIC_ICO}</button>`:""}<button class="primary pbtn" data-act="register">Registrar série</button></div>
     <p class="vozlive" id="voztxt" role="status">${ui.voz ? esc(ui.voz.txt || "Ouvindo… diga a carga e as repetições") : esc(ui.vozOk ? "" : vozMsg())}</p>
     ${renderSheet(s, p)}
   </div>`;
@@ -3048,7 +3116,7 @@ view.addEventListener("click", e=>{
   const act = b.dataset.act, d = state.plan.days[state.day];
   if(!act && b.dataset.day!==undefined){ state.day = +b.dataset.day; render(); return; }
   const S = state.session;
-  if(rec && act!=="voz") vozParar();
+  if((rec || grav) && act!=="voz") vozParar();
   if(act==="cfgset"){ const k = b.dataset.k, v = k==="days" ? +b.dataset.v : b.dataset.v; ui.cfgDraft = {...cfgNow(), [k]:v}; ui.genAsk = false; const y = window.scrollY; render(); window.scrollTo(0, y); return; }
   if(act==="gengo"){ const c = ui.cfgDraft || (state.novo ? cfgNow() : null); if(!c) return;
     if(state.session && !ui.genAsk){ ui.genAsk = true; render(); return; }
