@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Estudo de Cores – Advocacia Previdenciária</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Inter", sans-serif; color: #2a2a2a; font-size: 10pt; line-height: 1.5; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page { width: 210mm; height: 297mm; padding: 20mm 18mm 16mm; position: relative; overflow: hidden; page-break-after: always; background: #FBF9F6; }
+  .page:last-child { page-break-after: auto; }
+  h1, h2, h3, .serif { font-family: "Caladea", "DejaVu Serif", serif; font-weight: 700; color: #1d1d1d; }
+  h2 { font-size: 22pt; line-height: 1.15; margin-bottom: 4mm; }
+  h3 { font-size: 13pt; margin-bottom: 2mm; }
+  p { margin-bottom: 3mm; }
+  .eyebrow { font-size: 8pt; letter-spacing: .14em; text-transform: uppercase; color: #8a7f72; font-weight: 600; margin-bottom: 3mm; }
+  .lead { font-size: 11pt; color: #4a4a4a; max-width: 150mm; }
+  .footer { position: absolute; bottom: 9mm; left: 18mm; right: 18mm; display: flex; justify-content: space-between; font-size: 7.5pt; color: #a39a8e; border-top: .3mm solid #e4ddd3; padding-top: 2.5mm; }
+  .hex { font-family: "JetBrains Mono", monospace; font-size: 8pt; }
+
+  /* Capa */
+  .cover { background: #1F4E5A; color: #fff; padding: 0; display: flex; flex-direction: column; }
+  .cover .bands { display: flex; height: 60mm; }
+  .cover .bands div { flex: 1; }
+  .cover .content { padding: 28mm 20mm; flex: 1; display: flex; flex-direction: column; }
+  .cover h1 { color: #fff; font-size: 40pt; line-height: 1.05; margin-bottom: 8mm; }
+  .cover .eyebrow { color: #E9B9A3; }
+  .cover .lead { color: #d6e3e6; font-size: 13pt; }
+  .cover .bottom { margin-top: auto; font-size: 9pt; color: #a9c3c9; border-top: .3mm solid rgba(255,255,255,.2); padding-top: 4mm; }
+
+  /* Tabela */
+  table { width: 100%; border-collapse: collapse; margin: 3mm 0 6mm; }
+  th { text-align: left; font-size: 8pt; text-transform: uppercase; letter-spacing: .08em; color: #8a7f72; padding: 2mm 2mm; border-bottom: .4mm solid #d9d0c4; }
+  td { padding: 3mm 2mm; border-bottom: .2mm solid #e8e1d7; vertical-align: middle; }
+  .chip { display: inline-block; width: 9mm; height: 9mm; border-radius: 1.5mm; vertical-align: middle; margin-right: 1mm; border: .2mm solid rgba(0,0,0,.08); }
+  .callout { background: #fff; border-left: 1.2mm solid #C46A4A; padding: 4mm 5mm; border-radius: 0 2mm 2mm 0; margin: 4mm 0; }
+  .callout strong { color: #1d1d1d; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+  .card-box { background: #fff; border-radius: 2mm; padding: 5mm; border: .2mm solid #ebe4da; }
+  ul { padding-left: 4.5mm; margin-bottom: 3mm; }
+  li { margin-bottom: 1.5mm; }
+
+  /* Paletas */
+  .palette { background: #fff; border: .2mm solid #ebe4da; border-radius: 3mm; overflow: hidden; margin-bottom: 7mm; }
+  .palette .head { display: flex; height: 30mm; }
+  .palette .head .main { flex: 3; padding: 5mm 6mm; color: #fff; display: flex; flex-direction: column; justify-content: space-between; }
+  .palette .head .acc { flex: 1.4; padding: 5mm; display: flex; flex-direction: column; justify-content: flex-end; }
+  .palette .head .neu { flex: 1; padding: 5mm; display: flex; flex-direction: column; justify-content: flex-end; }
+  .palette .num { font-size: 8pt; letter-spacing: .12em; text-transform: uppercase; opacity: .75; }
+  .palette .name { font-family: "Caladea", serif; font-size: 17pt; font-weight: 700; line-height: 1.1; }
+  .palette .body { display: grid; grid-template-columns: 1fr 62mm; gap: 6mm; padding: 5mm 6mm; }
+  .palette .body p { font-size: 9pt; margin-bottom: 2mm; }
+  .tag { display: inline-block; font-size: 7.5pt; padding: .6mm 2.2mm; border-radius: 5mm; background: #f1ece5; color: #5c5348; margin: 0 1mm 1mm 0; }
+  .rec { background: #C46A4A; color: #fff; }
+
+  /* Mockups */
+  .mock { display: flex; gap: 3mm; align-items: center; }
+  .bizcard { width: 46mm; height: 27mm; border-radius: 1.2mm; padding: 3mm 3.5mm; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 .6mm 2mm rgba(0,0,0,.12); }
+  .bizcard .n { font-family: "Caladea", serif; font-weight: 700; font-size: 9pt; line-height: 1.1; }
+  .bizcard .r { font-size: 5.5pt; letter-spacing: .1em; text-transform: uppercase; }
+  .bizcard .bar { height: .8mm; width: 10mm; }
+  .bizcard .c { font-size: 5pt; opacity: .85; }
+  .avatar { width: 13mm; height: 13mm; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: "Caladea", serif; font-weight: 700; font-size: 11pt; flex-shrink: 0; }
+  .mocklabel { font-size: 7pt; color: #a39a8e; margin-top: 1.5mm; }
+
+  .checklist li { list-style: none; position: relative; padding-left: 7mm; margin-bottom: 3mm; }
+  .checklist li::before { content: ""; position: absolute; left: 0; top: .8mm; width: 3.5mm; height: 3.5mm; border: .4mm solid #1F4E5A; border-radius: .8mm; }
+  .step { display: flex; gap: 4mm; margin-bottom: 4.5mm; }
+  .step .n { font-family: "Caladea", serif; font-size: 20pt; color: #C46A4A; line-height: 1; width: 8mm; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<!-- CAPA -->
+<section class="page cover">
+  <div class="bands">
+    <div style="background:#C46A4A"></div>
+    <div style="background:#4A6355"></div>
+    <div style="background:#B87333"></div>
+    <div style="background:#4B2E46"></div>
+    <div style="background:#E8DCC8"></div>
+    <div style="background:#1E2A44"></div>
+    <div style="background:#D9A62E"></div>
+  </div>
+  <div class="content">
+    <div class="eyebrow">Estudo de identidade visual</div>
+    <h1>Cores para um escritório de advocacia previdenciária</h1>
+    <p class="lead">O que o mercado jurídico costuma usar, o que o público do previdenciário precisa sentir e quatro paletas para a marca se destacar sem perder a seriedade.</p>
+    <div class="bottom">Material de apoio para o redesenho da marca · Novembro de 2026</div>
+  </div>
+</section>
+
+<!-- PÁGINA 2: MERCADO -->
+<section class="page">
+  <div class="eyebrow">01 · O cenário</div>
+  <h2>As cores que a advocacia já usa</h2>
+  <p class="lead">Boa parte dos escritórios do país escolhe entre as mesmas cinco cores. São escolhas seguras, mas justamente por isso deixam as marcas parecidas umas com as outras.</p>
+
+  <table>
+    <tr><th style="width:30%">Cor</th><th style="width:33%">O que transmite</th><th>Ponto de atenção</th></tr>
+    <tr><td><span class="chip" style="background:#1B2A4A"></span> Azul-marinho</td><td>Confiança, seriedade</td><td>É a mais usada de todas e fica genérica.</td></tr>
+    <tr><td><span class="chip" style="background:#C9A961"></span> Dourado / bege</td><td>Tradição, prestígio</td><td>Quase sempre vem com o marinho, e o par virou clichê.</td></tr>
+    <tr><td><span class="chip" style="background:#6B1E2B"></span> Vinho / bordô</td><td>Sobriedade, tradição</td><td>Lembra escritórios antigos e formais.</td></tr>
+    <tr><td><span class="chip" style="background:#222"></span><span class="chip" style="background:#8C8C8C"></span> Preto e cinza</td><td>Elegância, autoridade</td><td>Pode soar frio e distante para o cliente.</td></tr>
+    <tr><td><span class="chip" style="background:#1F4A33"></span> Verde-escuro</td><td>Estabilidade</td><td>Menos comum, mas também tradicional.</td></tr>
+  </table>
+
+  <div class="callout">
+    <strong>Atenção no previdenciário:</strong> azul e verde lembram o INSS e o governo. Uma marca muito parecida com a de um órgão público pode confundir o cliente, que acha que está falando com o próprio INSS, e ainda passa uma imagem burocrática.
+  </div>
+
+  <div class="eyebrow" style="margin-top:8mm">02 · O público</div>
+  <h2>O que o cliente previdenciário precisa sentir</h2>
+  <div class="cols">
+    <div class="card-box">
+      <h3>Quem é o cliente</h3>
+      <ul>
+        <li>Idosos perto da aposentadoria</li>
+        <li>Pessoas doentes, acidentadas ou afastadas do trabalho</li>
+        <li>Famílias buscando pensão ou BPC/LOAS</li>
+        <li>Muitas vezes em situação de fragilidade financeira</li>
+      </ul>
+    </div>
+    <div class="card-box">
+      <h3>O que a marca deve passar</h3>
+      <ul>
+        <li><strong>Acolhimento</strong> antes de poder ou prestígio</li>
+        <li><strong>Segurança</strong> de que o caso está em boas mãos</li>
+        <li><strong>Clareza</strong>: alto contraste e leitura fácil</li>
+        <li><strong>Proximidade</strong>: cores mais quentes e humanas</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer"><span>Estudo de cores · Advocacia previdenciária</span><span>2</span></div>
+</section>
+
+<!-- PÁGINA 3: PALETAS 1 e 2 -->
+<section class="page">
+  <div class="eyebrow">03 · As propostas</div>
+  <h2>Quatro paletas para fugir do óbvio</h2>
+  <p class="lead" style="margin-bottom:6mm">Cada proposta combina uma cor principal sóbria, que garante seriedade, com uma cor de destaque marcante, que é a que faz a marca ser lembrada.</p>
+
+  <div class="palette">
+    <div class="head">
+      <div class="main" style="background:#1F4E5A"><span class="num">Paleta 1 · Recomendada</span><span class="name">Azul-petróleo<br>+ Terracota</span></div>
+      <div class="acc" style="background:#C46A4A;color:#fff"><span class="hex">#C46A4A</span></div>
+      <div class="neu" style="background:#F3EDE4;color:#5c5348"><span class="hex">#F3EDE4</span></div>
+    </div>
+    <div class="body">
+      <div>
+        <p><span class="hex">#1F4E5A</span> principal · <span class="hex">#C46A4A</span> destaque · <span class="hex">#F3EDE4</span> fundo</p>
+        <p>O petróleo mantém a seriedade do azul sem ser o marinho de todo mundo e se afasta do azul institucional do governo. A terracota traz calor humano, lembra terra, casa e cuidado.</p>
+        <span class="tag rec">Melhor equilíbrio</span><span class="tag">Sério e acolhedor</span><span class="tag">Pouco usada no ramo</span>
+      </div>
+      <div>
+        <div class="mock">
+          <div class="bizcard" style="background:#1F4E5A;color:#fff"><div><div class="n">Nome Sobrenome</div><div class="r" style="color:#E9B9A3">Advocacia Previdenciária</div></div><div class="bar" style="background:#C46A4A"></div><div class="c">OAB 000.000 · (00) 00000-0000</div></div>
+          <div class="avatar" style="background:#C46A4A;color:#fff">NS</div>
+        </div>
+        <div class="mocklabel">Cartão de visita e foto de perfil</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="palette">
+    <div class="head">
+      <div class="main" style="background:#4A6355"><span class="num">Paleta 2</span><span class="name">Verde-sálvia escuro<br>+ Cobre</span></div>
+      <div class="acc" style="background:#B87333;color:#fff"><span class="hex">#B87333</span></div>
+      <div class="neu" style="background:#F1EFE8;color:#5c5348"><span class="hex">#F1EFE8</span></div>
+    </div>
+    <div class="body">
+      <div>
+        <p><span class="hex">#4A6355</span> principal · <span class="hex">#B87333</span> destaque · <span class="hex">#F1EFE8</span> fundo</p>
+        <p>Transmite serenidade e cuidado, a ideia de tranquilidade no futuro. O sálvia é um verde acinzentado, bem diferente do verde do governo. O cobre ocupa o lugar do dourado sem cair no clichê.</p>
+        <span class="tag">Calma e confiança</span><span class="tag">Tom de saúde e cuidado</span><span class="tag">Visual atual</span>
+      </div>
+      <div>
+        <div class="mock">
+          <div class="bizcard" style="background:#F1EFE8;color:#2f3f36;border:.2mm solid #dcd7cb"><div><div class="n" style="color:#4A6355">Nome Sobrenome</div><div class="r" style="color:#B87333">Advocacia Previdenciária</div></div><div class="bar" style="background:#B87333"></div><div class="c">OAB 000.000 · (00) 00000-0000</div></div>
+          <div class="avatar" style="background:#4A6355;color:#F1EFE8">NS</div>
+        </div>
+        <div class="mocklabel">Cartão de visita e foto de perfil</div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>Estudo de cores · Advocacia previdenciária</span><span>3</span></div>
+</section>
+
+<!-- PÁGINA 4: PALETAS 3 e 4 -->
+<section class="page">
+  <div class="palette">
+    <div class="head">
+      <div class="main" style="background:#4B2E46"><span class="num">Paleta 3</span><span class="name">Ameixa<br>+ Areia</span></div>
+      <div class="acc" style="background:#E8DCC8;color:#4B2E46"><span class="hex">#E8DCC8</span></div>
+      <div class="neu" style="background:#A86B82;color:#fff"><span class="hex">#A86B82</span></div>
+    </div>
+    <div class="body">
+      <div>
+        <p><span class="hex">#4B2E46</span> principal · <span class="hex">#E8DCC8</span> apoio · <span class="hex">#A86B82</span> detalhe</p>
+        <p>Sofisticada e bem diferente de tudo no mercado. É parente do vinho tradicional, então ainda soa jurídica, mas de um jeito mais moderno. Combina com uma marca com presença feminina e personalidade.</p>
+        <span class="tag">Alta diferenciação</span><span class="tag">Elegante</span><span class="tag">Personalidade forte</span>
+      </div>
+      <div>
+        <div class="mock">
+          <div class="bizcard" style="background:#4B2E46;color:#E8DCC8"><div><div class="n" style="color:#fff">Nome Sobrenome</div><div class="r">Advocacia Previdenciária</div></div><div class="bar" style="background:#E8DCC8"></div><div class="c">OAB 000.000 · (00) 00000-0000</div></div>
+          <div class="avatar" style="background:#E8DCC8;color:#4B2E46">NS</div>
+        </div>
+        <div class="mocklabel">Cartão de visita e foto de perfil</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="palette">
+    <div class="head">
+      <div class="main" style="background:#1E2A44"><span class="num">Paleta 4</span><span class="name">Azul-noite<br>+ Mostarda</span></div>
+      <div class="acc" style="background:#D9A62E;color:#1E2A44"><span class="hex">#D9A62E</span></div>
+      <div class="neu" style="background:#F5F1E8;color:#5c5348"><span class="hex">#F5F1E8</span></div>
+    </div>
+    <div class="body">
+      <div>
+        <p><span class="hex">#1E2A44</span> principal · <span class="hex">#D9A62E</span> destaque · <span class="hex">#F5F1E8</span> fundo</p>
+        <p>Para quem prefere ficar perto do azul clássico. A mostarda é mais viva e moderna que o dourado, dá energia e otimismo e chama atenção em redes sociais, sem perder a seriedade.</p>
+        <span class="tag">Mais conservadora</span><span class="tag">Ótimo contraste</span><span class="tag">Chama atenção</span>
+      </div>
+      <div>
+        <div class="mock">
+          <div class="bizcard" style="background:#1E2A44;color:#fff"><div><div class="n">Nome Sobrenome</div><div class="r" style="color:#D9A62E">Advocacia Previdenciária</div></div><div class="bar" style="background:#D9A62E"></div><div class="c">OAB 000.000 · (00) 00000-0000</div></div>
+          <div class="avatar" style="background:#D9A62E;color:#1E2A44">NS</div>
+        </div>
+        <div class="mocklabel">Cartão de visita e foto de perfil</div>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="margin-top:2mm">Comparativo rápido</h3>
+  <table>
+    <tr><th>Paleta</th><th>Seriedade</th><th>Acolhimento</th><th>Originalidade</th></tr>
+    <tr><td><span class="chip" style="background:#1F4E5A;width:5mm;height:5mm"></span><span class="chip" style="background:#C46A4A;width:5mm;height:5mm"></span> Petróleo + Terracota</td><td>●●●●○</td><td>●●●●○</td><td>●●●●○</td></tr>
+    <tr><td><span class="chip" style="background:#4A6355;width:5mm;height:5mm"></span><span class="chip" style="background:#B87333;width:5mm;height:5mm"></span> Sálvia + Cobre</td><td>●●●○○</td><td>●●●●●</td><td>●●●●○</td></tr>
+    <tr><td><span class="chip" style="background:#4B2E46;width:5mm;height:5mm"></span><span class="chip" style="background:#E8DCC8;width:5mm;height:5mm"></span> Ameixa + Areia</td><td>●●●●○</td><td>●●●○○</td><td>●●●●●</td></tr>
+    <tr><td><span class="chip" style="background:#1E2A44;width:5mm;height:5mm"></span><span class="chip" style="background:#D9A62E;width:5mm;height:5mm"></span> Azul-noite + Mostarda</td><td>●●●●●</td><td>●●●○○</td><td>●●●○○</td></tr>
+  </table>
+  <div class="footer"><span>Estudo de cores · Advocacia previdenciária</span><span>4</span></div>
+</section>
+
+<!-- PÁGINA 5: PRÓXIMOS PASSOS -->
+<section class="page">
+  <div class="eyebrow">04 · Como decidir</div>
+  <h2>Próximos passos</h2>
+  <p class="lead" style="margin-bottom:8mm">Antes de escolher, vale testar as paletas no mundo real. Uma cor que parece linda na tela pode sumir no meio dos concorrentes ou ficar ilegível num celular.</p>
+
+  <div class="step"><div class="n">1</div><div><h3>Mapear os concorrentes da cidade</h3><p>Pesquise no Google e no Instagram os escritórios previdenciários da região e anote as cores de cada um. A melhor paleta é a que ninguém ali usa.</p></div></div>
+  <div class="step"><div class="n">2</div><div><h3>Testar em tamanho pequeno</h3><p>Coloque o logo na foto de perfil do WhatsApp e do Instagram. É ali que o cliente vai ver a marca com mais frequência, e ela precisa ser reconhecível em 2 cm.</p></div></div>
+  <div class="step"><div class="n">3</div><div><h3>Testar em preto e branco</h3><p>Uma boa marca funciona sem cor: em documentos impressos, carimbos e fotocópias. Se o logo depende da cor para ser entendido, precisa de ajuste.</p></div></div>
+  <div class="step"><div class="n">4</div><div><h3>Mostrar para clientes reais</h3><p>Pergunte a dois ou três clientes, de preferência os mais velhos, qual paleta passa mais confiança. A opinião deles vale mais que a nossa.</p></div></div>
+
+  <div class="callout" style="margin-top:6mm">
+    <strong>Além da cor:</strong> evite os ícones gastos do direito (balança, martelo, coluna grega). Um símbolo ligado a <strong>cuidado, futuro ou proteção</strong>, como mãos, um caminho, um broto ou um abrigo, diferencia muito mais e conversa melhor com o previdenciário.
+  </div>
+
+  <h3 style="margin-top:8mm">Checklist da escolha final</h3>
+  <ul class="checklist">
+    <li>Não lembra a identidade do INSS ou de outro órgão público</li>
+    <li>É diferente das cores dos principais concorrentes locais</li>
+    <li>O texto tem bom contraste e é fácil de ler, inclusive para quem enxerga mal</li>
+    <li>O logo funciona pequeno, em preto e branco e sobre foto</li>
+    <li>Passa seriedade <em>e</em> acolhimento ao mesmo tempo</li>
+  </ul>
+  <div class="footer"><span>Estudo de cores · Advocacia previdenciária</span><span>5</span></div>
+</section>
+
+</body>
+</html>
