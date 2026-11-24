@@ -38,7 +38,10 @@ header p{margin:4px 0 0;color:var(--muted);max-width:60ch}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px}
 .cfg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;align-items:end}
 label.f{display:flex;flex-direction:column;gap:5px;font-size:.78rem;font-weight:600;color:var(--muted);}
-select,input{font:inherit;font-size:.95rem;color:var(--fg);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0;width:100%}
+/* Toque duplo não dá zoom (o botão + da carga pode ser tocado rápido); o pinça para ampliar continua funcionando */
+html{touch-action:manipulation}
+/* 16 px: abaixo disso o iPhone amplia a tela sozinho ao tocar no campo */
+select,input{font:inherit;font-size:1rem;color:var(--fg);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0;width:100%}
 select:focus-visible,input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);padding:8px 14px;font-weight:600;font-size:.9rem}
 button:hover{border-color:var(--muted)}
@@ -901,7 +904,7 @@ window.EXA = (() => {
     pullover:{A:lying([24,98,1]),B:lying([59,58,1]),p:[...BENCH,["dbN"]]},
     remcurvh:{A:{h:[66,72],t:-20,a:[100,99,1],l:[70,122,-1]},B:{h:[66,72],t:-20,a:[84,80,1],l:[70,122,-1]},p:[["db"]]},
     terra:{A:{h:[58,92],t:-32,a:[86,106,1],l:[76,122,-1]},B:{h:[73,67],t:-88,a:[78,72,1],l:[75,122,-1]},p:[["bb"]]},
-    puxadasup:{A:{h:[70,92],t:-100,a:[72,14,-1],l:[98,122,-1]},B:{h:[70,92],t:-98,a:[80,56,-1],l:[98,122,-1]},p:[["beam",72,112,6],["cab",72,8],["barH"]]},
+    puxadasup:{A:{h:[70,92],t:-100,a:[72,14,1],l:[98,122,-1]},B:{h:[70,92],t:-98,a:[82,58,1],l:[98,122,-1]},p:[["beam",72,112,6],["cab",72,8],["barH"]]},
     elevfront:{A:st([77,70,1]),B:st([112,33,1]),p:[["db"]]},
     remalta:{A:{...st([80,72,1]),ae:[77,51]},B:{...st([86,41,1]),ae:[70,33]},p:[["bb"]]},
     roscapolia:{A:{...ST,a:[76,70,1]},B:{...ST,a:[84,30,1]},p:[["ln",120,104,120,122,3],["cab",120,110],["barH"]]},
@@ -1412,7 +1415,7 @@ window.EXA = (() => {
   // Movimento secundário: o tronco acompanha braços e pernas (t em graus no pico, h = deslocamento do quadril)
   const SEC = {
     roscab:{t:-4,h:[1,0]}, roscaalt:{t:-4,h:[1,0]}, martelo:{t:-4,h:[1,0]}, scott:{t:-2}, frances:{t:-2},
-    pulley:{t:3}, bayes:{t:2}, chestm:{t:-2.5}, puxada:{t:-6,h:[-1,0]}, pulldown:{t:5},
+    pulley:{t:3}, bayes:{t:2}, chestm:{t:-2.5}, puxada:{t:-6,h:[-1,0]}, puxadasup:{t:-6,h:[-1,0]}, pulldown:{t:5},
     remcurv:{t:-5}, cavalinho:{t:-5}, remuni:{t:-4}, facepull:{t:-4},
     extensora:{t:-3}, cadflex:{t:2}, pantsent:{t:1}, flexora:{h:[0,-1.5]}
   };
