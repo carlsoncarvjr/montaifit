@@ -959,7 +959,14 @@ window.EXA = (() => {
     puxadatri:{A:{h:[70,92],t:-100,a:[70,14,1],l:[98,122,-1]},B:{h:[70,92],t:-96,a:[84,58,1],l:[98,122,-1]},p:[["beam",72,112,6],["cab",72,8],["tri"]]},
     pulldowncorda:{A:{h:[70,67],t:-75,a:[108,12,1],l:[72,122,-1]},B:{h:[70,67],t:-75,a:[80,72,1],l:[72,122,-1]},p:[["ln",152,2,152,122,3],["cab",150,13],["corda"]]},
     remcurvsup:{A:{h:[66,72],t:-20,a:[100,99,1],l:[70,122,-1]},B:{h:[66,72],t:-20,a:[82,80,1],l:[70,122,-1]},p:[["bb"]]},
-    encolh:{A:{...ST,a:[76,72,1],sg:0},B:{...ST,a:[76,66,1],sg:5},p:[["db"]]},
+    encolh:{A:{...ST,a:[76,72,1],sg:0},B:{...ST,a:[76,65,1],sg:7},p:[["db"]]},
+    // ---- trapézio ----
+    encolhb:{A:{...ST,a:[79,72,1],sg:0},B:{...ST,a:[79,65,1],sg:7},p:[["bb"]]},
+    encolhcostas:{A:{...ST,a:[69,73,-1],sg:0},B:{...ST,a:[69,66,-1],sg:7},p:[["bb"]]},
+    encolhpol:{A:{...ST,a:[80,72,1],sg:0},B:{...ST,a:[80,65,1],sg:7},p:[["ln",120,104,120,122,3],["cab",120,110],["barH"]]},
+    farmer:{A:{h:[75,66],t:-90,a:[76,72,1],l:[88,122,-1],l2:[62,122,-1]},B:{h:[75,66],t:-90,a:[76,72,1],l:[62,122,-1],l2:[88,122,-1]},p:[["dbN"]]},
+    remaltah:{A:{...st([80,72,1]),ae:[77,51]},B:{...st([86,41,1]),ae:[70,33]},p:[["db"]]},
+    remaltapol:{A:{...st([80,72,1]),ae:[77,51]},B:{...st([86,41,1]),ae:[70,33]},p:[["ln",120,104,120,122,3],["cab",120,110],["barH"]]},
     arnold:{v:"f",A:{h:[80,92],a:[90,40,1],ae:[95,58],l:[100,122,-1]},B:{h:[80,92],a:[100,17,1],ae:[97.5,37],l:[100,122,-1]},p:[["r",60,92,40,5],["dbF"]]},
     elevfrontpol:{A:st([77,72,1]),B:st([112,33,1]),p:[["cab",50,112],["barH"]]},
     roscaw:{A:st([76,70,1]),B:st([84,30,1]),p:[["bb"]]},
@@ -1084,6 +1091,12 @@ window.EXA = (() => {
     pulldowncorda:["Em pé, corda na polia alta, tronco levemente inclinado.","Leve a corda até as coxas com os braços quase retos, abrindo no final.","Volte devagar até a altura dos olhos."],
     remcurvsup:["Tronco inclinado, coluna reta, palmas viradas para cima.","Puxe a barra em direção ao umbigo, cotovelos junto ao corpo.","Desça controlando até esticar os braços."],
     encolh:["Em pé, halteres ao lado do corpo, braços esticados.","Suba os ombros em direção às orelhas, sem dobrar os cotovelos.","Segure 1 segundo e desça devagar."],
+    encolhb:["Em pé, barra à frente das coxas, pegada na largura dos ombros.","Suba os ombros em direção às orelhas, braços esticados.","Segure 1 segundo em cima e desça devagar, sem girar os ombros."],
+    encolhcostas:["Barra atrás das coxas, palmas viradas para trás.","Suba os ombros em direção às orelhas, levando-os um pouco para trás.","Segure 1 segundo e desça devagar."],
+    encolhpol:["De frente para a polia baixa, barra nas mãos, braços esticados.","Suba os ombros em direção às orelhas.","Desça devagar sentindo o trapézio alongar."],
+    farmer:["Um halter pesado em cada mão, ombros para trás e abdômen firme.","Caminhe com passos curtos, sem deixar os ombros caírem.","Ande pela distância ou tempo da série e apoie os halteres com a coluna reta."],
+    remaltah:["Halteres à frente das coxas, palmas para você.","Puxe os halteres até a altura do peito, cotovelos subindo acima das mãos.","Desça devagar."],
+    remaltapol:["De frente para a polia baixa, barra com pegada fechada.","Puxe a barra até o peito, cotovelos subindo para fora.","Desça devagar, sem balançar o tronco."],
     arnold:["Sentado, halteres na frente do rosto, palmas viradas para você.","Empurre para cima girando as palmas para a frente.","Desça desfazendo o giro até a posição inicial."],
     elevfrontpol:["De costas para a polia baixa, barra entre as pernas.","Eleve os braços à frente até a altura dos ombros.","Desça devagar, sem balançar o tronco."],
     roscaw:["Em pé, segure a barra W na parte inclinada.","Suba dobrando os cotovelos, sem tirá-los do lugar.","Desça devagar até esticar."],
@@ -1222,7 +1235,7 @@ window.EXA = (() => {
     pantleg:[["eqLegpress",-10],{k:"eqLegPlat",ref:[106.5,56.5],at:"an",off:[2.8,-2.8]}],
     pelvicauni:[["eqBancoReto",-92]],
     cruciinc:[["eqBancoInc",-4]], puxadatri:[["eqPolia",6],["eqPuxada",-16]], pulldowncorda:POL(44), elevfrontpol:POL(-56),
-    arnold:[{k:"eqBancoVertF", fit:[80,34]}], francesb:[["eqBancoVert",-12]], crossbaixo:[["eqCrossover",-20.3]], adupolia:[["eqCrossover",-20.3]],
+    arnold:[{k:"eqBancoVertF", fit:[80,34]}], encolhpol:POL(14), remaltapol:POL(14), francesb:[["eqBancoVert",-12]], crossbaixo:[["eqCrossover",-20.3]], adupolia:[["eqCrossover",-20.3]],
     flexora:[["eqMesa",-42],{k:"eqMesaRolo",lever:"back",pivAt:[32,97.5],layer:"back"}],
     legpress:[["eqLegpress",-10],{k:"eqLegPlat",ref:[106.5,56.5],at:"an",off:[2.8,-2.8]}],
     hack:[["eqHack",0,undefined,1,true],{k:"eqHackApoio",ref:[110.8,69.7],at:"sh",layer:"body",flip:1}],
@@ -1536,7 +1549,7 @@ window.EXA = (() => {
 // ---------- Biblioteca de exercícios ----------
 // eq: b = barra, d = halteres, g = máquina/polia, c = peso corporal
 const GROUPS = {
-  peito:"Peito", costas:"Costas", ombros:"Ombros", biceps:"Bíceps", triceps:"Tríceps",
+  peito:"Peito", costas:"Costas", ombros:"Ombros", trap:"Trapézio", biceps:"Bíceps", triceps:"Tríceps",
   quad:"Quadríceps", post:"Posterior de coxa", glut:"Glúteos", adut:"Adutores", pant:"Panturrilha", core:"Abdômen"
 };
 const EX = [
@@ -1601,9 +1614,12 @@ const EX = [
   ["flexjoel","Flexão com joelhos apoiados","peito","c",1],["cruciinc","Crucifixo inclinado com halteres","peito","d",0],
   ["crossbaixo","Crossover na polia baixa","peito","g",0],["puxadatri","Puxada com triângulo","costas","g",1],
   ["pulldowncorda","Pulldown com corda","costas","g",0],["remcurvsup","Remada curvada supinada","costas","b",1],
-  ["encolh","Encolhimento com halteres","costas","d",0],["arnold","Desenvolvimento Arnold","ombros","d",1],
+  ["encolh","Encolhimento com halteres","trap","d",0],["arnold","Desenvolvimento Arnold","ombros","d",1],
   ["elevfrontpol","Elevação frontal na polia","ombros","g",0],["roscaw","Rosca direta com barra W","biceps","b",0],
-  ["francesb","Tríceps francês com barra W","triceps","b",0]
+  ["francesb","Tríceps francês com barra W","triceps","b",0],
+  ["encolhb","Encolhimento com barra","trap","b",0],["encolhcostas","Encolhimento com barra por trás","trap","b",0],
+  ["encolhpol","Encolhimento na polia","trap","g",0],["farmer","Caminhada do fazendeiro","trap","d",1],
+  ["remaltah","Remada alta com halteres","trap","d",1],["remaltapol","Remada alta na polia","trap","g",1]
 ].map(([id,name,g,eq,comp])=>({id,name,g,eq,comp:!!comp}));
 const BY = Object.fromEntries(EX.map(e=>[e.id,e]));
 const EQ_OK = {full:["b","d","g","c"], dumb:["d","c"], body:["c"]};
@@ -1620,7 +1636,7 @@ const TPL = {
     S("costas","puxada","barra","remmesa"),S("costas","remcurv","cavalinho","remuni","remmesa"),
     S("costas","rembaixa","remuni","remmesa"),S("ombros","facepull","crucinv","ytw"),
     S("biceps","bayes","scott","roscaalt","barrasup"),S("costas","pulldown","remuni","barra"),
-    S("biceps","martelo","roscaalt"),S("ombros","crucinv","facepull","ytw"),S("costas","cavalinho","remuni")]},
+    S("biceps","martelo","roscaalt"),S("ombros","crucinv","facepull","ytw"),S("trap","encolh","encolhb","encolhpol","farmer"),S("costas","cavalinho","remuni")]},
   legs:{name:"Pernas",focus:"Quadríceps, posterior, glúteos",slots:[
     S("quad","agach","goblet","agachpc"),S("post","cadflex","flexora","nordic"),
     S("quad","legpress","hack","bulgaro","afundo"),S("post","terrarom","stiffh","bancorom"),
@@ -1659,6 +1675,9 @@ function residual(e){
   const r = {};
   if(e.g==="peito"){ r.ombros = .5; if(e.comp) r.triceps = .5; }
   if(e.g==="costas" && e.id!=="pulldown"){ r.biceps = .5; r.ombros = .5; }
+  if(e.g==="costas" && /^rem|cavalinho/.test(e.id)) r.trap = .5;   // remadas também trabalham o trapézio médio
+  if(["remalta","facepull","terra","terrasumo"].includes(e.id)) r.trap = .5;
+  if(e.g==="trap" && e.comp) r.ombros = .5;
   if(e.g==="ombros" && e.comp) r.triceps = .5;
   if(e.g==="quad" && e.comp){ r.glut = .5; r.adut = .5; }
   if(e.g==="post" && e.comp) r.glut = .5;
@@ -2568,7 +2587,7 @@ function renderVolume(){
   const max = Math.max(18, ...Object.keys(GROUPS).map(tot));
   const fmt = n=>String(Math.round(n*2)/2).replace(".",",");
   const rows = Object.entries(GROUPS).map(([g,l])=>{
-    const v = tot(g), minor = g==="adut";
+    const v = tot(g), minor = g==="adut" || g==="trap";
     const zLo = minor?3:lo, zHi = minor?8:hi, inZone = v>=zLo && v<=zHi;
     return `<div class="vrow"><span>${l}</span>
       <div class="bar" role="img" aria-label="${l}: ${fmt(v)} séries, ${fmt(res[g])} de tabela"><span class="zone" style="left:${zLo/max*100}%;width:${(zHi-zLo)/max*100}%"></span><i class="${inZone?"in":""}" style="width:${v/max*100}%"></i><i class="res" style="left:${dir[g]/max*100}%;width:${res[g]/max*100}%"></i></div>
@@ -2776,7 +2795,7 @@ function renderDone(s, d){
 // Parte do músculo que cada exercício mais trabalha (para não repetir a mesma parte no treino)
 const PARTS = {
   peito:{superior:["supinc","supincb","flexinc","cruciinc","crossbaixo"], "médio":["supreto","supretoh","chestm","peck","cruci","flex","pullover","flexjoel"], inferior:["supdecl","paralelas","cross"]},
-  costas:{largura:["puxada","puxadasup","barra","pulldown","puxadatri","pulldowncorda"], espessura:["remcurv","remcurvh","remuni","rembaixa","cavalinho","remmesa","remcurvsup","encolh"]},
+  costas:{largura:["puxada","puxadasup","barra","pulldown","puxadatri","pulldowncorda"], espessura:["remcurv","remcurvh","remuni","rembaixa","cavalinho","remmesa","remcurvsup"]},
   ombros:{anterior:["desenvh","desenvb","elevfront","pike","arnold","elevfrontpol"], lateral:["elevlat","elevlatp","remalta"], posterior:["crucinv","facepull","ytw"]},
   biceps:{"cabeça longa":["bayes","roscainc","roscadrag"], "cabeça curta":["scott","roscascotth","roscaconc"], "braquial (lateral do braço)":["martelo","roscacorda","roscainv"], "bíceps inteiro":["roscab","roscaalt","roscapolia","barrasup","roscaw"]},
   triceps:{"cabeça longa":["frances","tricepsov","testa","testah","francesb"], "cabeça lateral":["pulley","pulleycorda","coice"], "cabeça medial":["pulleyuni"], "tríceps inteiro (multiarticular)":["supfechado","mergulho","flexdiam"]},
@@ -2785,6 +2804,7 @@ const PARTS = {
   glut:{"extensão de quadril":["pelvica","ponte","subida","coicepolia","pontebarra","pelvicauni","coice4","swing"], "lateral (glúteo médio)":["abdutora"]},
   core:{"superior":["crunch","abdpolia","abddecl"], "inferior":["elevpern","abdinfra"], "estabilidade":["prancha","escalador"]},
   pant:{"em pé (gastrocnêmio)":["pantpe","pantuni","pantleg","panthalter"], "sentado (sóleo)":["pantsent"]},
+  trap:{"superior (encolhimento)":["encolh","encolhb","encolhcostas","encolhpol","farmer"], "médio (remada alta)":["remaltah","remaltapol"]},
   adut:{"adutores":["adutora","sumo","adupolia","afundolat","cossaco"]}
 };
 const PART_OF = {}; for(const [g,ps] of Object.entries(PARTS)) for(const [pt,ids] of Object.entries(ps)) for(const id of ids) if(!PART_OF[id]) PART_OF[id] = pt;
@@ -2822,7 +2842,7 @@ const FAM = {};
  ["roscab","roscaalt","martelo","scott","bayes","roscapolia","roscaconc","roscainc","roscainv","roscascotth","roscacorda","roscadrag","roscaw"],["pulley","pulleycorda","coice","pulleyuni"],["frances","testa","testah","tricepsov","francesb"],["mergulho","flexdiam","paralelas","supfechado"],
  ["agach","goblet","agachpc","hack","legpress","sumo","agachfront","smith","legpressuni","agachsalto","parede"],["bulgaro","afundo","passada","subida","afundorev"],["extensora","extuni","sissy"],
  ["terrarom","stiffh","terra","bancorom","stiffuni","goodmorning","terrasumo","swing"],
- ["flexora","cadflex","nordic","cadflexuni"],["pelvica","ponte","coicepolia","pontebarra","pelvicauni","coice4","swing"],["pantpe","pantsent","pantuni","pantleg","panthalter"],["adutora","adupolia"],["sumo","afundolat","cossaco"],["prancha","escalador"],["crunch","abdpolia","abddecl"],["elevpern","abdinfra"]
+ ["flexora","cadflex","nordic","cadflexuni"],["pelvica","ponte","coicepolia","pontebarra","pelvicauni","coice4","swing"],["pantpe","pantsent","pantuni","pantleg","panthalter"],["adutora","adupolia"],["encolh","encolhb","encolhcostas","encolhpol","farmer"],["remaltah","remaltapol"],["sumo","afundolat","cossaco"],["prancha","escalador"],["crunch","abdpolia","abddecl"],["elevpern","abdinfra"]
 ].forEach((f,i)=>f.forEach(id=>{ (FAM[id] = FAM[id]||[]).push(i); }));
 const sameFam = (a,b)=>(FAM[a]||[]).some(i=>(FAM[b]||[]).includes(i));
 function similar(id, exclude=[], n=6){
@@ -3093,7 +3113,7 @@ function weekVolume(){
 const BODY = {
   front:[["ombros","r",89,56,6.5,9.5,-16],["peito","p","M61.5 50h11.5q8.5 0 8.5 8v5q0 8-10 8H61.5z"],["biceps","l",91,68,94.5,92,9.5],
     ["quad","p","M63.5 144q8-5 17 0 2 20-3.5 39-4.500 3-9 0-6-19-4.500-39z"],["adut","r",63.2,152,2.4,11,-4]],
-  back:[["ombros","r",89,56,6.5,9.5,-16],["costas","p","M61.5 46.500h8.500q9.500 1 12 10l-2.500 27q-6 14-18 19.500z"],["triceps","l",91,68,94.5,92,9.5],
+  back:[["ombros","r",89,56,6.5,9.5,-16],["costas","p","M61.5 46.500h8.500q9.500 1 12 10l-2.500 27q-6 14-18 19.500z"],["trap","p","M60 33h5.5l1.5 8q9 1.5 15 5-1 3-4 3.5-9-1-18 6.5z"],["triceps","l",91,68,94.5,92,9.5],
     ["glut","p","M61.5 124q10-3 18.500 3 1.500 11-4 16-8 4-14.500-1z"],["post","p","M63.5 150q8-4 17 0 1.500 17-3.500 33-4.500 3-9 0-5.500-16-4.500-33z"],["pant","r",72,210,6.5,15,0]]
 };
 function bodyFig(side, tone, dx){
