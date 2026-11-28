@@ -929,6 +929,25 @@ window.EXA = (() => {
     pulleyuni:{A:{h:[72,67],t:-85,a:[90,48,1],l:[74,122,-1]},B:{h:[72,67],t:-85,a:[78,69,1],l:[74,122,-1]},p:[["cab",104,13],["pegador"]]},
     abddecl:{A:{h:[95,95],t:170,ar:[-7,7,-1],a:[60,96,-1],l:[128,92,-1]},B:{h:[95,95],t:-118,ar:[-7,7,-1],a:[80,60,-1],l:[128,92,-1]},p:[]},
     abdpolia:{A:{h:[60,94],t:-80,ar:[9,6,1],a:[70,48,1],l:[30,120,-1,180]},B:{h:[60,94],t:12,ar:[9,6,1],a:[97,96,1],l:[30,120,-1,180]},p:[["cab",80,13],["corda"]]},
+    // ---- inferiores (lote 2) ----
+    agachfront:{A:{h:[75,67],t:-90,a:[86,30,1],ae:[93,40],l:[75,122,-1]},B:{h:[60,96],t:-72,a:[82,62,1],ae:[90,71],l:[75,122,-1]},p:[["bb"]]},
+    smith:{A:{h:[75,67],t:-90,a:[66,32,-1],l:[80,122,-1]},B:{h:[58,96],t:-55,a:[72,67,-1],l:[80,122,-1]},p:[["ln",40,4,40,122,3],["bb"]]},
+    sissy:{A:{h:[75,67],t:-90,a:[104,38,1],l:[75,122,-1]},B:{h:[78,88],t:-128,a:[86,62,1],l:[76,117,-1,30]},p:[]},
+    extuni:{A:{h:[59,92],t:-98,a:[63,96,1],l:[73,121,-1],l2:[73,121,-1]},B:{h:[59,92],t:-98,a:[63,96,1],l:[113.4,95.1,-1],l2:[73,121,-1]},p:[["r",42,92,44,5],["ln",46,92,50,50,4],["ln",60,97,60,122,3],["padA"]]},
+    legpressuni:{A:{h:[66,106],t:-135,a:[70,108,1],lf:1,l:[93.7,59.3,-1,-135]},B:{h:[66,106],t:-135,a:[70,108,1],lf:1,l:[82.4,70.6,-1,-135]},p:[["ln",58,104,8,80,6],["plat"]]},
+    afundorev:{A:{h:[75,67],t:-90,a:[75,100,1],l:[75,122,-1],l2:[75,122,-1,0]},B:{h:[70,96],t:-88,a:[70,128,1],l:[104,122,-1],l2:[36,117,-1,40]},p:[["db"]]},
+    agachsalto:{A:{h:[58,96],t:-55,a:[54,104,1],l:[75,122,-1]},B:{h:[75,56],t:-90,a:[92,14,1],l:[75,111,-1,55]},p:[]},
+    parede:{A:{h:[68,94],t:-90,a:[88,92,1],l:[96,122,-1]},B:{h:[68,95],t:-90,a:[88,93,1],l:[96,122,-1]},p:[["ln",59,8,59,122,4]]},
+    stiffuni:{A:{h:[73,67],t:-88,a:[77,70,1],l:[75,122,-1],l2:[75,122,-1]},B:{h:[58,72],t:-15,a:[93,100,1],l:[75,122,-1],l2:[6,88,-1,80]},p:[["db"]]},
+    goodmorning:{A:{h:[75,67],t:-90,a:[66,32,-1],l:[75,122,-1]},B:{h:[60,72],t:-14,a:[92,57,-1],l:[75,122,-1]},p:[["bb"]]},
+    terrasumo:{A:{h:[60,94],t:-38,a:[84,108,1],l:[78,122,-1]},B:{h:[73,67],t:-88,a:[78,72,1],l:[76,122,-1]},p:[["bb"]]},
+    swing:{A:{h:[58,80],t:-28,a:[66,104,1],l:[75,122,-1]},B:{h:[75,67],t:-92,a:[112,34,1],l:[75,122,-1]},p:[["dbN"]]},
+    cadflexuni:{A:{h:[59,92],t:-98,a:[63,96,1],l:[113.4,95.1,-1],l2:[113.4,95.1,-1]},B:{h:[59,92],t:-98,a:[63,96,1],l:[78,121,-1],l2:[113.4,95.1,-1]},p:[["padT"]]},
+    pontebarra:{A:{h:[62,116],t:178,a:[62,107,1],l:[96,122,-1]},B:{h:[68,98],t:156,a:[68,90,1],l:[96,122,-1]},p:[["hipbar"]]},
+    pelvicauni:{A:{h:[62,116],t:-140,a:[30,96,1],l:[98,122,-1],l2:[110,99,-1]},B:{h:[72,92],t:180,a:[30,96,1],l:[98,122,-1],l2:[124,90,-1]},p:[["r",8,88,32,5],["ln",14,93,14,122,3],["ln",34,93,34,122,3]]},
+    coice4:{A:{h:[58,90],t:-6,a:[96,121,1],l:[33,121,1,180],l2:[33,121,1,180]},B:{h:[58,89],t:-8,a:[96,121,1],l:[31,64,1],l2:[33,121,1,180]},p:[]},
+    pantleg:{A:{h:[66,106],t:-135,a:[70,108,1],lf:1,l:[93.7,59.3,-1,-135]},B:{h:[66,106],t:-135,a:[70,108,1],lf:1,l:[93.7,59.3,-1,-100]},p:[["ln",58,104,8,80,6],["plat"]]},
+    panthalter:{A:{h:[75,67],t:-90,a:[76,70,1],l:[75,122,-1,0]},B:{h:[76,61],t:-90,a:[77,64,1],l:[76,117,-1,30]},p:[["db"]]},
   };
   const CUES = {
     abddecl:["Prenda os pés no apoio do banco inclinado, mãos cruzadas no peito.","Suba o tronco enrolando a coluna, até ficar perto da vertical.","Desça devagar, sem deixar o tronco cair."],
@@ -1020,7 +1039,25 @@ window.EXA = (() => {
     abdutora:["Sente com a parte externa dos joelhos nos apoios.","Abra as pernas empurrando os apoios para fora.","Volte devagar sem deixar o peso bater."],
     abdpolia:["Ajoelhado, corda da polia alta junto à cabeça.","Enrole o tronco levando os cotovelos às coxas.","Volte devagar sem mover o quadril."],
     elevpern:["Deitado, mãos ao lado do corpo, lombar no chão.","Eleve as pernas retas até 90°.","Desça devagar sem encostar os pés no chão."],
-    crunch:["Deitado, joelhos dobrados, mãos no peito.","Tire os ombros do chão contraindo o abdômen.","Desça devagar."]
+    crunch:["Deitado, joelhos dobrados, mãos no peito.","Tire os ombros do chão contraindo o abdômen.","Desça devagar."],
+    agachfront:["Barra apoiada na frente dos ombros, cotovelos altos apontando para a frente.","Desça com o tronco bem ereto até as coxas passarem da horizontal.","Suba empurrando o chão sem deixar os cotovelos caírem."],
+    smith:["Barra do smith no alto das costas, pés um pouco à frente do corpo.","Desça até as coxas ficarem paralelas ao chão.","Suba empurrando o chão com o pé inteiro."],
+    sissy:["Em pé, segure em um apoio com uma mão e suba na ponta dos pés.","Leve os joelhos à frente e incline o tronco para trás, quadril estendido.","Volte contraindo a coxa, em linha reta dos joelhos aos ombros."],
+    extuni:["Sente na cadeira extensora com só uma perna atrás do rolo.","Estenda o joelho até a perna ficar reta.","Desça devagar e troque de lado."],
+    legpressuni:["Costas apoiadas, um pé no meio da plataforma.","Desça até o joelho formar 90°, sem tirar o quadril do banco.","Empurre sem travar o joelho e troque de lado."],
+    afundorev:["Em pé, halteres ao lado do corpo.","Dê um passo para trás e desça até o joelho de trás quase tocar o chão.","Empurre com a perna da frente e volte à posição inicial."],
+    agachsalto:["Pés na largura dos ombros, agache com os braços para trás.","Salte explosivo, jogando os braços para cima.","Aterrisse macio, já descendo para o próximo agachamento."],
+    parede:["Costas apoiadas na parede, joelhos a 90°.","Pés à frente, na linha dos joelhos.","Segure a posição pelo tempo da série, respirando normalmente."],
+    stiffuni:["Halter em uma mão, apoio em uma perna com o joelho levemente dobrado.","Incline o tronco levando a outra perna para trás, em linha com as costas.","Volte contraindo glúteo e posterior. Troque de lado."],
+    goodmorning:["Barra no alto das costas, joelhos levemente dobrados.","Incline o tronco levando o quadril para trás, coluna reta.","Suba contraindo glúteos e posterior."],
+    terrasumo:["Pés bem afastados, pontas para fora, mãos na barra entre as pernas.","Empurre o chão abrindo os joelhos, barra rente ao corpo.","Desça pelo mesmo caminho, coluna reta."],
+    swing:["Segure o halter com as duas mãos, pés um pouco mais abertos que os ombros.","Leve o halter entre as pernas jogando o quadril para trás.","Estenda o quadril com força e deixe o halter subir até a altura do peito."],
+    cadflexuni:["Sente na cadeira flexora com só uma perna sobre o rolo.","Dobre o joelho trazendo o rolo para baixo.","Volte devagar e troque de lado."],
+    pontebarra:["Deitado no chão, joelhos dobrados, barra sobre o quadril.","Eleve o quadril empurrando os calcanhares.","Segure 1 segundo em cima e desça devagar."],
+    pelvicauni:["Costas apoiadas no banco, um pé no chão e a outra perna estendida.","Eleve o quadril empurrando o calcanhar até o tronco ficar reto.","Desça devagar. Troque de lado."],
+    coice4:["Quatro apoios: mãos sob os ombros, joelhos sob o quadril.","Leve um pé para cima com o joelho dobrado, contraindo o glúteo.","Volte sem arquear a lombar. Troque de lado."],
+    pantleg:["No leg press, só a ponta dos pés na borda da plataforma, pernas estendidas.","Empurre a plataforma esticando os pés.","Volte devagar alongando a panturrilha."],
+    panthalter:["Em pé, um halter em cada mão ao lado do corpo.","Suba o mais alto possível na ponta dos pés.","Desça devagar até apoiar o calcanhar."]
   };
 
   const rad = d=>d*Math.PI/180, dir = d=>[Math.cos(rad(d)),Math.sin(rad(d))];
@@ -1150,6 +1187,10 @@ window.EXA = (() => {
     puxada:[["eqPolia",6],["eqPuxada",-16]], puxadasup:[["eqPolia",6],["eqPuxada",-16]],
     barra:[["eqBarraFixa",-29,-37.5]], barrasup:[["eqBarraFixa",-29,-37.5]],
     extensora:CAD, cadflex:[CAD[0],{...CAD[1],lever:"back"}],
+    extuni:CAD, cadflexuni:[CAD[0],{...CAD[1],lever:"back"}],
+    legpressuni:[["eqLegpress",-10],{k:"eqLegPlat",ref:[106.5,56.5],at:"an",off:[2.8,-2.8]}],
+    pantleg:[["eqLegpress",-10],{k:"eqLegPlat",ref:[106.5,56.5],at:"an",off:[2.8,-2.8]}],
+    pelvicauni:[["eqBancoReto",-92]],
     flexora:[["eqMesa",-42],{k:"eqMesaRolo",lever:"back",pivAt:[32,97.5],layer:"back"}],
     legpress:[["eqLegpress",-10],{k:"eqLegPlat",ref:[106.5,56.5],at:"an",off:[2.8,-2.8]}],
     hack:[["eqHack",0,undefined,1,true],{k:"eqHackApoio",ref:[110.8,69.7],at:"sh",layer:"body",flip:1}],
@@ -1510,7 +1551,16 @@ const EX = [
   ["roscascotth","Rosca Scott com halter","biceps","d",0],["roscacorda","Rosca martelo na corda","biceps","g",0],
   ["roscadrag","Rosca arrastada (drag curl)","biceps","b",0],
   ["supfechado","Supino pegada fechada","triceps","b",1],["tricepsov","Tríceps acima da cabeça na polia","triceps","g",0],
-  ["testah","Tríceps testa com halteres","triceps","d",0],["pulleyuni","Tríceps unilateral na polia","triceps","g",0]
+  ["testah","Tríceps testa com halteres","triceps","d",0],["pulleyuni","Tríceps unilateral na polia","triceps","g",0],
+  ["agachfront","Agachamento frontal com barra","quad","b",1],["smith","Agachamento no smith","quad","g",1],
+  ["sissy","Agachamento sissy","quad","c",0],["extuni","Cadeira extensora unilateral","quad","g",0],
+  ["legpressuni","Leg press unilateral","quad","g",1],["afundorev","Afundo reverso com halteres","quad","d",1],
+  ["agachsalto","Agachamento com salto","quad","c",1],["parede","Agachamento isométrico na parede","quad","c",0],
+  ["stiffuni","Stiff unilateral com halter","post","d",1],["goodmorning","Bom dia com barra (good morning)","post","b",1],
+  ["terrasumo","Levantamento terra sumô","post","b",1],["cadflexuni","Cadeira flexora unilateral","post","g",0],
+  ["swing","Swing com halter","glut","d",1],["pontebarra","Ponte de glúteo com barra","glut","b",1],
+  ["pelvicauni","Elevação pélvica unilateral","glut","c",1],["coice4","Coice de glúteo no chão (4 apoios)","glut","c",0],
+  ["pantleg","Panturrilha no leg press","pant","g",0],["panthalter","Panturrilha em pé com halteres","pant","d",0]
 ].map(([id,name,g,eq,comp])=>({id,name,g,eq,comp:!!comp}));
 const BY = Object.fromEntries(EX.map(e=>[e.id,e]));
 const EQ_OK = {full:["b","d","g","c"], dumb:["d","c"], body:["c"]};
@@ -1531,7 +1581,7 @@ const TPL = {
   legs:{name:"Pernas",focus:"Quadríceps, posterior, glúteos",slots:[
     S("quad","agach","goblet","agachpc"),S("post","cadflex","flexora","nordic"),
     S("quad","legpress","hack","bulgaro","afundo"),S("post","terrarom","stiffh","bancorom"),
-    S("quad","extensora","bulgaro","afundo"),S("glut","pelvica","ponte"),S("pant","pantpe","pantuni"),
+    S("quad","extensora","bulgaro","afundorev","afundo"),S("glut","pelvica","pontebarra","pelvicauni","ponte"),S("pant","pantpe","panthalter","pantuni"),
     S("adut","adutora"),S("core","abdpolia","elevpern","prancha")]},
   upper:{name:"Superior",focus:"Tronco e braços",slots:[
     S("peito","supreto","supretoh","flex"),S("costas","puxada","barra","remmesa"),
@@ -1541,8 +1591,8 @@ const TPL = {
   lower:{name:"Inferior",focus:"Pernas e abdômen",slots:[
     S("post","terrarom","stiffh","ponte"),S("quad","hack","agach","goblet","agachpc"),
     S("post","flexora","cadflex","nordic"),S("quad","bulgaro","afundo","legpress"),
-    S("glut","pelvica","ponte"),S("pant","pantsent","pantpe","pantuni"),S("core","prancha","elevpern","crunch"),
-    S("glut","abdutora"),S("quad","extensora","afundo")]},
+    S("glut","pelvica","pontebarra","pelvicauni","ponte"),S("pant","pantsent","pantpe","panthalter","pantuni"),S("core","prancha","elevpern","crunch"),
+    S("glut","abdutora","coice4"),S("quad","extensora","afundorev","sissy")]},
   full:{name:"Corpo todo",focus:"Todos os grupos",slots:[
     S("quad","agach","goblet","agachpc"),S("peito","supreto","supretoh","flex"),
     S("costas","puxada","remuni","barra","remmesa"),S("post","terrarom","stiffh","ponte"),
@@ -2687,11 +2737,11 @@ const PARTS = {
   ombros:{anterior:["desenvh","desenvb","elevfront","pike"], lateral:["elevlat","elevlatp","remalta"], posterior:["crucinv","facepull","ytw"]},
   biceps:{"cabeça longa":["bayes","roscainc","roscadrag"], "cabeça curta":["scott","roscascotth","roscaconc"], "braquial (lateral do braço)":["martelo","roscacorda","roscainv"], "bíceps inteiro":["roscab","roscaalt","roscapolia","barrasup"]},
   triceps:{"cabeça longa":["frances","tricepsov","testa","testah"], "cabeça lateral":["pulley","pulleycorda","coice"], "cabeça medial":["pulleyuni"], "tríceps inteiro (multiarticular)":["supfechado","mergulho","flexdiam"]},
-  quad:{"agachamento (multiarticular)":["agach","goblet","agachpc","hack","legpress","bulgaro","afundo","passada"], "isolado":["extensora"]},
-  post:{"quadril (stiff/terra)":["terrarom","stiffh","terra","bancorom"], "joelho (flexora)":["flexora","cadflex","nordic"]},
-  glut:{"extensão de quadril":["pelvica","ponte","subida","coicepolia"], "lateral (glúteo médio)":["abdutora"]},
+  quad:{"agachamento (multiarticular)":["agach","goblet","agachpc","hack","legpress","bulgaro","afundo","passada","agachfront","smith","legpressuni","afundorev","agachsalto"], "isolado":["extensora","extuni","sissy","parede"]},
+  post:{"quadril (stiff/terra)":["terrarom","stiffh","terra","bancorom","stiffuni","goodmorning","terrasumo"], "joelho (flexora)":["flexora","cadflex","nordic","cadflexuni"]},
+  glut:{"extensão de quadril":["pelvica","ponte","subida","coicepolia","pontebarra","pelvicauni","coice4","swing"], "lateral (glúteo médio)":["abdutora"]},
   core:{"superior":["crunch","abdpolia","abddecl"], "inferior":["elevpern","abdinfra"], "estabilidade":["prancha","escalador"]},
-  pant:{"em pé (gastrocnêmio)":["pantpe","pantuni"], "sentado (sóleo)":["pantsent"]},
+  pant:{"em pé (gastrocnêmio)":["pantpe","pantuni","pantleg","panthalter"], "sentado (sóleo)":["pantsent"]},
   adut:{"adutores":["adutora","sumo"]}
 };
 const PART_OF = {}; for(const [g,ps] of Object.entries(PARTS)) for(const [pt,ids] of Object.entries(ps)) for(const id of ids) if(!PART_OF[id]) PART_OF[id] = pt;
@@ -2727,8 +2777,9 @@ const FAM = {};
  ["rembaixa","remcurv","remcurvh","remuni","cavalinho","remmesa"],["puxada","puxadasup","barra","barrasup","pulldown"],
  ["desenvh","desenvb","pike"],["elevlat","elevlatp","elevfront","remalta"],["crucinv","facepull","ytw"],
  ["roscab","roscaalt","martelo","scott","bayes","roscapolia","roscaconc","roscainc","roscainv","roscascotth","roscacorda","roscadrag"],["pulley","pulleycorda","coice","pulleyuni"],["frances","testa","testah","tricepsov"],["mergulho","flexdiam","paralelas","supfechado"],
- ["agach","goblet","agachpc","hack","legpress","sumo"],["bulgaro","afundo","passada","subida"],["terrarom","stiffh","terra","bancorom"],
- ["flexora","cadflex","nordic"],["pelvica","ponte","coicepolia"],["pantpe","pantsent","pantuni"],["prancha","escalador"],["crunch","abdpolia","abddecl"],["elevpern","abdinfra"]
+ ["agach","goblet","agachpc","hack","legpress","sumo","agachfront","smith","legpressuni","agachsalto","parede"],["bulgaro","afundo","passada","subida","afundorev"],["extensora","extuni","sissy"],
+ ["terrarom","stiffh","terra","bancorom","stiffuni","goodmorning","terrasumo","swing"],
+ ["flexora","cadflex","nordic","cadflexuni"],["pelvica","ponte","coicepolia","pontebarra","pelvicauni","coice4","swing"],["pantpe","pantsent","pantuni","pantleg","panthalter"],["prancha","escalador"],["crunch","abdpolia","abddecl"],["elevpern","abdinfra"]
 ].forEach((f,i)=>f.forEach(id=>{ (FAM[id] = FAM[id]||[]).push(i); }));
 const sameFam = (a,b)=>(FAM[a]||[]).some(i=>(FAM[b]||[]).includes(i));
 function similar(id, exclude=[], n=6){
