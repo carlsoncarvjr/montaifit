@@ -3485,6 +3485,7 @@ function finishSession(){
     if(en.from && en.keep==="new"){ const it = target.items.find(x=>x.id===en.from); if(it){ it.id = en.id; it.mao = true; } }
   }
   const entries = s.entries.map(en=>({id:en.id, sets:en.sets.filter(x=>x.done).map(({kg,reps})=>({kg,reps}))}));
+  track("treino_concluido", {exercicios:entries.filter(e=>e.sets.length).length, series:entries.reduce((a,e)=>a+e.sets.length,0)});
   const dur = s.started ? Math.round((Date.now()-new Date(s.started))/60000) : 0;
   const aval = s.aval && s.aval.nota ? {nota:s.aval.nota, tags:(s.aval.tags||[]).slice(0,6), ...(String(s.aval.texto||"").trim() ? {texto:String(s.aval.texto).trim().slice(0,500)} : {})} : null;
   state.history.push({date:new Date().toISOString(), dayName:day.name, dayType:(s.custom ? (s.mineId ? "Meu treino" : "Personal") : day.type), entries,
@@ -3503,13 +3504,14 @@ $("#gen").addEventListener("click", ()=>{
   const btn = $("#gen");
   if(state.session && !genConfirm){ genConfirm = true; btn.textContent = "Confirmar: substituir plano"; return; }
   genConfirm = false; btn.textContent = "Gerar plano";
+  track("plano_gerado", {objetivo:cfg.goal, dias:cfg.days, equipamento:cfg.equip});
   $("#cfgBox").open = false;
   state.novo = false;
   state.cfg = {...cfg, avoid:(state.cfg&&state.cfg.avoid)||[], bars:(state.cfg&&state.cfg.bars)||{}}; state.plan = generate(state.cfg); state.planIA = null; state.session = null; state.day = 0; state.view = "plano"; ui.planSub = {kind:"sug"}; ui.justGen = true;
   if(state.hojePick && state.hojePick.day!=null) state.hojePick = null;
   save(); render();
 });
-document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click", ()=>{ state.view = t.dataset.view; state.confirmDel=null; Object.assign(ui,{planSub:null,draft:null,cat:null,editIdx:null}); render(); window.scrollTo({top:0}); }));
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click", ()=>{ track("screen_view", {screen_name:t.dataset.view}); state.view = t.dataset.view; state.confirmDel=null; Object.assign(ui,{planSub:null,draft:null,cat:null,editIdx:null}); render(); window.scrollTo({top:0}); }));
 $("#hdrBack").addEventListener("click", ()=>{ if(ui.cat) ui.cat = null; else { ui.planSub = null; ui.draft = null; ui.editIdx = null; } render(); window.scrollTo({top:0}); });
 
 const view = $("#view");
@@ -3841,6 +3843,20 @@ const FB_HOSTS = ["carlsoncarvjr.github.io", "montaifit.com.br", "www.montaifit.
 const FB_ON = !(window.claude && window.claude.use) && FB_HOSTS.includes(location.hostname);
 const ACC_KEY = "montai-conta";
 const fb = {auth:null, db:null, user:null, acc:null, ready:false, failed:false};
+// Google Analytics (Firebase): só no site publicado. Conta acessos e algumas ações, sem nome, e-mail nem cargas.
+// Os eventos chamados antes da biblioteca carregar ficam na fila e são enviados depois.
+const GA_ON = FB_ON && location.hostname !== "localhost";
+const ga = {an:null, q:[], uid:null};
+// id interno da conta (não é o e-mail): permite contar pessoas, e não aparelhos
+function gaUser(uid){ ga.uid = uid; try{ if(ga.an) ga.an.setUserId(uid); }catch(e){} }
+function track(name, params){ if(!GA_ON) return; try{ ga.an ? ga.an.logEvent(name, params||{}) : ga.q.push([name, params||{}]); }catch(e){} }
+async function gaBoot(){
+  if(!GA_ON) return;
+  try{ await loadScript(FB_SDK+"analytics-compat.js");
+    if(!(await firebase.analytics.isSupported())) return;
+    ga.an = firebase.analytics(); if(ga.uid) ga.an.setUserId(ga.uid); ga.q.splice(0).forEach(([n,p])=>ga.an.logEvent(n,p));
+  }catch(e){}
+}
 const loadScript = src=>new Promise((res, rej)=>{ const el = document.createElement("script"); el.src = src; el.onload = res; el.onerror = ()=>rej(new Error("sdk")); document.head.appendChild(el); });
 const accOf = u=>({uid:u.uid, nome:u.displayName || String(u.email||"").split("@")[0] || "Você", email:u.email||"", foto:u.photoURL||""});
 function enterAccount(acc){
@@ -3858,10 +3874,12 @@ async function fbBoot(){
     await Promise.all([loadScript(FB_SDK+"auth-compat.js"), loadScript(FB_SDK+"firestore-compat.js")]);
     firebase.initializeApp(FB_CFG);
     fb.auth = firebase.auth(); fb.db = firebase.firestore();
+    gaBoot();
     try{ await fb.db.enablePersistence({synchronizeTabs:true}); }catch(e){}
     fb.auth.languageCode = "pt-BR";
     fb.auth.onAuthStateChanged(u=>{
       fb.ready = true; fb.user = u;
+      if(u) gaUser(u.uid);
       if(u) enterAccount(accOf(u));
       else { try{ localStorage.removeItem(ACC_KEY); }catch(e){} fb.acc = null; showLogin(); }
     });
@@ -3948,14 +3966,14 @@ async function loginDo(kind){
   const email = ($("#lemail")?.value||"").trim(), pass = $("#lpass")?.value||"";
   msg("");
   try{
-    if(kind==="google") await fb.auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+    if(kind==="google"){ const r = await fb.auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); track(r && r.additionalUserInfo && r.additionalUserInfo.isNewUser ? "sign_up" : "login", {method:"google"}); }
     else if(kind==="reset"){ if(!email){ msg("Digite seu e-mail acima e toque de novo em Esqueci a senha."); return; }
       await fb.auth.sendPasswordResetEmail(email); msg("Enviei um link para você criar uma senha nova. Confira seu e-mail."); }
     else{
       if(!email){ msg("Digite seu e-mail."); return; }
       if(!pass){ msg("Digite a senha."); return; }
-      if(kind==="new") await fb.auth.createUserWithEmailAndPassword(email, pass);
-      else await fb.auth.signInWithEmailAndPassword(email, pass);
+      if(kind==="new"){ await fb.auth.createUserWithEmailAndPassword(email, pass); track("sign_up", {method:"email"}); }
+      else { await fb.auth.signInWithEmailAndPassword(email, pass); track("login", {method:"email"}); }
     }
   }catch(e){ const t = FB_ERR[e && e.code]; msg(t!==undefined ? t : "Não deu para entrar agora. Tente de novo."); }
 }
