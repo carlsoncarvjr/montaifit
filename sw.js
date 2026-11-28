@@ -1,6 +1,6 @@
 // MontAI Fit: guarda uma cópia do app para abrir sem internet na academia.
 // Rede primeiro (sempre pega a versão nova quando há sinal); sem sinal, usa a cópia guardada.
-const CACHE = "montai-fit-20261128035210";
+const CACHE = "montai-fit-20261128035659";
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(["./", "./index.html", "./manifest.webmanifest"])).then(() => self.skipWaiting()));
